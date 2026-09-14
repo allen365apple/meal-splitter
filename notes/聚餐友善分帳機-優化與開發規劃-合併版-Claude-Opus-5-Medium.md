@@ -954,6 +954,71 @@ Designed by 王柏文
 
 ---
 
+## 五之六、階段 11：正式建置 ＋ 部署上線 ✅ 已完成 2026-09-15
+
+**使用者 2026-09-15 決定**：要部署到網站給更多人用，不是傳 `index.html` 給朋友。因此原本「為了可攜性而保留 CDN 即時編譯」的取捨不再成立，改做正式建置。
+
+### 建置改造
+
+| 項目 | 改造前 | 改造後 |
+|---|---|---|
+| React | CDN 載入 | esbuild 打包進 bundle |
+| Tailwind | CDN play script（瀏覽器即時產生 CSS） | Tailwind CLI 預先產生、minify |
+| JSX | Babel Standalone 在瀏覽器即時編譯 | esbuild 建置時編譯 |
+| **執行時外部依賴** | **4 個 CDN 資源** | **0 個** |
+
+產出：`docs/index.html`（2.9KB）＋ `docs/app.js`（220KB）＋ `docs/app.css`（28KB）。
+
+**好處**：首次開啟不再需要下載 Babel 再即時編譯 56KB 的 JSX，白屏消失；第三方 CDN 出問題也不會影響網站。
+
+**檔案結構**：
+```
+src/app.jsx     主程式（1,622 行）
+src/app.css     Tailwind 入口 + 自訂樣式
+src/index.html  HTML 模板
+docs/           建置產出（GitHub Pages 讀這裡）
+legacy/         原本的單檔版本，保留作參考
+notes/          開發紀錄（本文件與兩份檢查報告）
+```
+
+### 部署
+
+- GitHub repo：[allen365apple/dinner-bill-splitter](https://github.com/allen365apple/dinner-bill-splitter)（public）
+- GitHub Pages：main 分支 `/docs`，**不使用 GitHub Actions**（少一層失敗點，非技術背景也好維護）
+- 加了 `docs/.nojekyll` 關掉 Jekyll 處理
+- 線上網址：**https://allen365apple.github.io/dinner-bill-splitter/**
+
+### 公開前的敏感資訊掃描
+
+依 CLAUDE.md 安全底線第 4 條執行：
+
+| 檢查項目 | 結果 |
+|---|---|
+| API key／token／secret | ✅ 無（`package-lock.json` 的命中只是一個叫 `js-tokens` 的套件名稱） |
+| 內部 URL／內網位址 | ✅ 無（只有本機測試用的 `localhost:8777`） |
+| 客戶名稱／內部頻道結構 | ✅ 無 |
+| 真實姓名 | ⚠️ 「王柏文」出現在 App 署名、結算單文字、README、LICENSE。**已向使用者確認保留**（原本就是刻意的署名）。 |
+| 開發討論文件 | ⚠️ 含跨模型比較與開發過程紀錄。**已向使用者確認一起公開**，整理進 `notes/` 並加上說明。 |
+| `.DS_Store` | 已加入 `.gitignore` |
+
+### README
+
+中英雙語單一檔案（英文在前，頂端有語言切換連結），涵蓋使用者指定的三個重點：這個工具是什麼、有哪些功能、什麼情境最適合用。功能表格 13 項、適用情境 7 項（含「不必用」的情況）。
+
+### 上線驗收
+
+| 檢查 | 結果 |
+|---|---|
+| Pages 建置狀態 | `built` ✅ |
+| `/`、`/app.js`、`/app.css`、`/manifest.webmanifest` | 全部 HTTP 200 ✅ |
+| 線上頁面的外部 CDN 依賴 | **0 個** ✅ |
+| console 錯誤 | 無 ✅ |
+| `localStorage`（HTTPS 環境） | 可用 ✅ |
+| 線上完整流程 | 匯入 4 行（1 行服務費被擋）→ 卡片檢視 1/3 → 結算總額 1760，每人 587+587+586 = **1760** ✅ |
+| 手機版面（390×844） | 正常 ✅ |
+
+---
+
 ## 六、完成總結（2026-09-15）
 
 六個階段全部完成，共修正 **19 項原始錯誤** ＋ **6 項實作過程中實測發現的新問題**，並新增 3 項功能。
@@ -993,8 +1058,8 @@ Designed by 王柏文
 ### 已知限制
 
 1. **沒有離線快取**（service worker 需 HTTPS，單檔 `file://` 做不到）。
-2. **仍使用瀏覽器即時編譯**（Tailwind CDN + Babel Standalone）。首次開啟會有短暫白屏；已加載入失敗提示，但未做預先建置。
-3. **`index.html` 已成長到約 1,600 行**。單檔好備份、好傳給朋友，但若要再擴充建議拆檔。
+2. ~~仍使用瀏覽器即時編譯~~ → **已於階段 11 改為預先建置，執行時零 CDN 依賴**。
+3. **主程式 `src/app.jsx` 約 1,620 行**。已從單檔拆出 HTML／CSS／JS，但主程式本身仍是一個檔案；若要再大幅擴充，建議把 icon 元件與各個 render 函式拆成獨立模組。
 4. ~~份數權重未實作~~ → **已於階段 10 完成**。
 5. **沒有多 CDN 自動備援**（版本已鎖定，並保留載入失敗提示）。
 
