@@ -1,0 +1,21 @@
+{
+  "name": "dinner-bill-splitter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "聚餐友善分帳機 — a fair, itemised bill splitter for group meals.",
+  "scripts": {
+    "build:css": "tailwindcss -i src/app.css -o docs/app.css --minify",
+    "build:js": "esbuild src/app.jsx --bundle --minify --format=iife --target=es2018 --loader:.jsx=jsx --jsx=automatic --define:process.env.NODE_ENV=\"\\\"production\\\"\" --outfile=docs/app.js",
+    "build:html": "node scripts/build-html.js",
+    "build": "npm run build:css && npm run build:js && npm run build:html",
+    "serve": "python3 -m http.server 8777 --directory docs"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.0",
+    "tailwindcss": "3.4.17"
+  }
+}
