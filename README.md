@@ -1,34 +1,47 @@
 <div align="center">
 
-# 💸 Meal Splitter — 聚餐友善分帳機
+# 💸 Meal Splitter
 
-### Fair, itemised bill splitter for group meals — everyone pays for what they actually ate, not the total ÷ heads.
-### 聚餐分帳工具：誰吃了什麼就付什麼，不是把總額除以人數硬均攤。
+### 聚餐友善分帳機
 
-**Free · No sign-up · No app to install · Works in any phone browser · English + 繁體中文**
-**免費、免註冊、免安裝，手機瀏覽器直接開，中英雙語**
+**Everyone pays for what they actually ate — not the bill split evenly by heads.**
 
-## 👉 [**Open the app · 立即使用**](https://allen365apple.github.io/meal-splitter/) 👈
+**誰吃了什麼就付什麼，不是把總額除以人數硬均攤。**
+
+<br>
+
+## 🍽️ &nbsp; [**Open the app · 立即使用**](https://allen365apple.github.io/meal-splitter/) &nbsp; 🍽️
+
+<br>
+
+`Free` &nbsp;·&nbsp; `No sign-up` &nbsp;·&nbsp; `No install` &nbsp;·&nbsp; `English + 繁體中文`
+
+免費 &nbsp;·&nbsp; 免註冊 &nbsp;·&nbsp; 免安裝 &nbsp;·&nbsp; 手機瀏覽器直接開
 
 </div>
 
-> **In one line:** paste or type the dishes, tick who ate each one, and it works out exactly what each person owes — down to the last dollar — as a message you can drop straight into your group chat.
->
-> **一句話：** 把菜貼上或輸入、勾選每道菜誰有吃，它就算出每個人該付多少（精確到 1 元不差），產出一段可以直接貼進群組的訊息。
+---
 
-**What it handles that "just split it evenly" can't — 平均分做不到、但它做得到的：**
+Type or paste the dishes, tick who ate each one, and Meal Splitter works out exactly what each person owes — down to the last dollar — then hands you a summary you can drop straight into your group chat.
 
-🥦 vegetarians & dietary restrictions · 🍺 drinks nobody shares equally · 🍽️ one steak among six set menus · ⚖️ someone who ate two portions · 🎁 treating a friend · 💳 who paid first & who owes whom · 🧮 service charge & fixed extras · 🔢 numbers that always add up to the exact total
+> 輸入或貼上菜色、勾選每道菜誰有吃，它就算出每個人該付多少（精確到 1 元不差），再給你一段可以直接貼進群組的結算訊息。
 
-🥦 有人吃素／有飲食限制 · 🍺 酒水喝得不平均 · 🍽️ 六個套餐裡一份牛排 · ⚖️ 有人吃了兩份 · 🎁 請客 · 💳 誰先付、誰該轉錢給誰 · 🧮 服務費與固定加收 · 🔢 金額永遠對得上總額
+### It's built for the bills that are annoying to split
 
-**Also — 還有：** 📋 paste a whole receipt at once · 🤖 photograph the bill & let ChatGPT/Gemini turn it into text · 💾 auto-saves in your browser · 📲 add to home screen like an app
+- 🥦 &nbsp; Someone's **vegetarian** and didn't touch the meat dishes
+- 🍺 &nbsp; **Drinks** that not everyone shared
+- 🍽️ &nbsp; One **steak** among six set menus
+- ⚖️ &nbsp; Someone ate **two portions** of the same dish
+- 🎁 &nbsp; You're **treating** a friend, but not everyone
+- 💳 &nbsp; One person **paid the whole bill** — who owes them what?
 
-📋 整張帳單一次貼上 · 🤖 拍帳單請 ChatGPT／Gemini 轉文字 · 💾 自動存在瀏覽器 · 📲 可加到主畫面像 App 一樣用
+> **最適合這些難分的帳單：** 有人吃素沒動肉 · 酒水喝得不平均 · 六個套餐裡一份牛排 · 有人吃了兩份 · 你想請其中一個人 · 一個人先付、其他人要轉錢給他
 
-<sub>**Keywords:** bill splitter · split the bill · split a restaurant bill · itemised / itemized bill split · group dining · dinner bill calculator · who-owes-what · fair split · AA · PWA · 分帳 · 分帳工具 · 聚餐分帳 · 帳單分攤 · AA 制 · 均攤 · 拆帳 · 誰吃什麼付什麼</sub>
+Split it evenly and the light eaters quietly subsidise the heavy ones. Meal Splitter makes each person pay for what they actually had.
 
-**Jump to — 跳到：** [English](#english) · [繁體中文](#繁體中文)
+> 平均分就是讓吃少的人默默補貼吃多的人。這個工具讓每個人付自己真正吃掉的部分。
+
+**Read on — 往下看：** &nbsp; [English](#english) &nbsp;·&nbsp; [繁體中文](#繁體中文)
 
 ---
 
@@ -211,5 +224,11 @@ MIT。歡迎使用、fork、自己部署一份。
 ---
 
 <div align="center">
+
+<sub>**Also known as / 相關關鍵字:** bill splitter · split the bill · split a restaurant bill · itemised bill split · group dining calculator · who-owes-what · fair split · AA · 分帳 · 分帳工具 · 聚餐分帳 · 帳單分攤 · AA 制 · 均攤 · 拆帳 · 誰吃什麼付什麼</sub>
+
+<br>
+
 <sub>Designed by 王柏文 · Built with Claude Code</sub>
+
 </div>
