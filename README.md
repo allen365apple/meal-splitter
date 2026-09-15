@@ -4,9 +4,9 @@
 
 ### 聚餐友善分帳機
 
-**Everyone pays for what they actually ate — not the bill split evenly by heads.**
+**Someone's vegetarian, someone skipped the drinks, someone only had a dish or two — group meals are never fair to split evenly. Here, everyone just pays for what they ate.**
 
-**誰吃了什麼就付什麼，不是把總額除以人數硬均攤。**
+**聚餐後分錢，總卡在吃素的、沒喝酒的、只吃幾道菜的人？讓每個人只付自己吃的那份，分帳一次講清楚。**
 
 <br>
 
