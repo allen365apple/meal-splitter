@@ -1,8 +1,8 @@
 {
-  "name": "dinner-bill-splitter",
+  "name": "meal-splitter",
   "version": "1.0.0",
   "private": true,
-  "description": "聚餐友善分帳機 — a fair, itemised bill splitter for group meals.",
+  "description": "聚餐友善分帳機 Meal Splitter — a fair, itemised bill splitter for any shared meal.",
   "scripts": {
     "build:css": "tailwindcss -i src/app.css -o docs/app.css --minify",
     "build:js": "esbuild src/app.jsx --bundle --minify --format=iife --target=es2018 --loader:.jsx=jsx --jsx=automatic --define:process.env.NODE_ENV=\"\\\"production\\\"\" --outfile=docs/app.js",

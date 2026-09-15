@@ -1,12 +1,12 @@
 <div align="center">
 
-# 💸 Dinner Bill Splitter<br>聚餐友善分帳機
+# 💸 Meal Splitter<br>聚餐友善分帳機
 
 **Split a group meal bill by what each person actually ate — not by dividing the total.**
 
 **誰吃了什麼就付什麼，不是把總額除以人數。**
 
-### 👉 [**Open the app / 開始使用**](https://allen365apple.github.io/dinner-bill-splitter/) 👈
+### 👉 [**Open the app / 開始使用**](https://allen365apple.github.io/meal-splitter/) 👈
 
 No install. No sign-up. No account. Works in any phone browser.<br>
 免安裝、免註冊、免帳號，手機瀏覽器直接開。

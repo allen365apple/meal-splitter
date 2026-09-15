@@ -1,5 +1,5 @@
 {
-  "name": "聚餐友善分帳機",
+  "name": "聚餐友善分帳機 Meal Splitter",
   "short_name": "分帳機",
   "description": "專為聚餐設計的分帳工具。支援自訂群組標籤、文字批次匯入與請客功能。",
   "start_url": "./index.html",

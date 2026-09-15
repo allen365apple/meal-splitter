@@ -70,8 +70,9 @@ const BillSplitter = () => {
     const [reviewIndex, setReviewIndex] = useState(0);
     const [pendingReviewIds, setPendingReviewIds] = useState([]);
     const [importText, setImportText] = useState('');
-    const [aiPrompt, setAiPrompt] = useState('請幫我把這張帳單用轉換為繁體中文純文字，格式舉例：高麗菜 100。');
+    const [aiPrompt, setAiPrompt] = useState('請把這張帳單照片轉成純文字明細，嚴格照下面規則輸出：\n\n1. 每一行只寫「品名 金額」，中間一個半形空格。例：高麗菜 160\n2. 金額只寫阿拉伯數字，不要加逗號、$、元等符號。\n3. 同一道菜點了多份時，務必拆成多行分開列，不要合併成一行。\n   例：帳單上是「高麗菜 3份 480」，請輸出：\n   高麗菜第一份 160\n   高麗菜第二份 160\n   高麗菜第三份 160\n   原因：每一份可能是不同的人吃的，合併成一筆就沒辦法分帳。\n   若帳單只有總價沒有單價，請自行除以份數算出單價。\n4. 折扣、折抵請用負數。例：折扣 -50\n5. 服務費、清潔費、開瓶費請放在全部明細的最後面，各自獨立一行。\n   例：服務費 88\n6. 不要列出小計、總計、應付、實收、找零、發票號碼、統一編號、日期、時間、桌號、人數等非消費項目。\n7. 看不清楚的品名就寫 ?，例如：? 120。不要猜，也不要整行省略。\n8. 只輸出明細本身。不要加標題、編號、條列符號、表格、程式碼框或任何說明文字。\n9. 全部用繁體中文。\n\n如果有任何看不清楚或不確定的地方，請在所有明細之後空一行、加一行 --- ，再寫你的說明。\n\n輸出範例：\n宮保雞丁 180\n高麗菜第一份 160\n高麗菜第二份 160\n台灣啤酒 120\n折扣 -50\n服務費 88');
     const [copyPromptSuccess, setCopyPromptSuccess] = useState(false);
+    const [showPrompt, setShowPrompt] = useState(false);
     
     // Install Guide Modal
     const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -432,39 +433,56 @@ const BillSplitter = () => {
         '小計','總計','合計','總額','總共','應付','應收','實收','找零','零錢','現金','刷卡','信用卡',
         '服務費','服務料','清潔費','低消','最低消費','開瓶費','加一','稅額','營業稅','未稅','含稅',
         'total','subtotal','tax','service','cash','change',
-        '電話','統編','統一編號','地址','發票','日期','時間','桌號','人數','桌次','訂單','單號','會員','點數','折價券'
+        '電話','統編','統一編號','地址','發票','日期','時間','桌號','人數','桌次','訂單','單號','會員','點數'
     ];
+
+    // 折扣類的字眼。帳單上常常寫「折扣 100」卻沒有負號，
+    // 直接照抄就會變成加價 100，所以這類項目一律當成負數處理。
+    const DISCOUNT_WORDS = ['折扣','折抵','折價','折讓','優惠','抵用','扣抵','減免','discount','coupon','voucher'];
 
     const parseImportLine = (rawLine) => {
         const raw = rawLine.trim();
         if (!raw) return null;
 
-        // 全形符號正規化
+        // 正規化：全形數字、全形符號、各種破折號、定位字元
         let line = raw
-            .replace(/　/g, ' ')
+            .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFF10 + 0x30))
+            .replace(/[　\t]/g, ' ')
             .replace(/：/g, ':')
-            .replace(/＄/g, '$')
+            .replace(/[＄﹩]/g, '$')
             .replace(/，/g, ',')
-            .replace(/－|—|–|−/g, '-')
+            .replace(/[－—–−﹣ー]/g, '-')
+            .replace(/[（]/g, '(')
+            .replace(/[）]/g, ')')
+            .replace(/\s+/g, ' ')
             .trim();
 
-        // 只清掉「金額結尾」的元／圓，不動品名（避免「元盅雞湯」被砍成「盅雞湯」）
-        line = line.replace(/(\d)\s*[元圓塊]\s*$/, '$1');
+        // 清掉金額後面的單位與贅字（元／圓／塊／整／NT／TWD），只動結尾不動品名
+        // （避免「元盅雞湯」被砍成「盅雞湯」）
+        line = line.replace(/(\d)\s*(?:元整|元|圓|塊|塊錢|NTD?|TWD)\s*$/i, '$1');
 
         const lower = line.toLowerCase();
+        const SERVICE_WORDS = ['服務費', '服務料', '清潔費', '開瓶費', '加一', '低消', '最低消費'];
+        if (SERVICE_WORDS.some(k => line.includes(k))) {
+            // 不當成菜色匯入，否則第 3 步又加一次服務費 → 收兩次
+            return { skipped: true, raw, reason: '服務費類，請在結算頁設定' };
+        }
         if (IMPORT_BLACKLIST.some(k => lower.includes(k.toLowerCase()))) {
             return { skipped: true, raw, reason: '收據雜訊' };
         }
 
         // 抓「該行最後一個」金額：支援千分位 1,200 / 小數 / 負號 / 括號負數
-        const m = line.match(/(-|\()?\s*(?:NT\$?|\$|¥)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*\)?\s*$/i);
+        // NT / NTD / TWD 前面一定要有空白或行首，否則 "discount 25" 的 "nt" 會被
+        // 當成貨幣符號吃掉，品名變成 "discou"。$ 和 ¥ 不可能是字母的一部分，不受此限。
+        const m = line.match(/(-|\()?\s*(?:(?:^|\s)(?:NT\$?|NTD|TWD)|\$|¥)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*\)?\s*$/i);
         if (!m) return { skipped: true, raw, reason: '找不到金額' };
 
-        const negative = !!m[1];
         const intPart = m[2].replace(/,/g, '');
         let price = parseFloat(m[3] ? intPart + '.' + m[3] : intPart);
         if (!isFinite(price) || price === 0) return { skipped: true, raw, reason: '金額無效' };
-        if (negative) price = -price;
+        // 有負號、或品名帶折扣字眼，都視為折抵
+        const isDiscount = !!m[1] || DISCOUNT_WORDS.some(k => lower.includes(k.toLowerCase()));
+        if (isDiscount) price = -Math.abs(price);
         if (Math.abs(price) > 9999999) return { skipped: true, raw, reason: '金額異常' };
 
         // 品名 = 金額之前的內容，清掉尾端殘留的分隔符號
@@ -480,7 +498,14 @@ const BillSplitter = () => {
         const newItems = [];
         const skipped = [];
 
-        importText.split('\n').forEach((line, idx) => {
+        // 指令裡要求 AI 把不確定的說明寫在一行 --- 之後，解析到那裡就停
+        const lines = [];
+        for (const line of importText.split('\n')) {
+            if (/^\s*-{3,}\s*$/.test(line)) break;
+            lines.push(line);
+        }
+
+        lines.forEach((line, idx) => {
             const r = parseImportLine(line);
             if (!r) return;                                   // 空行，直接忽略
             if (r.skipped) { skipped.push(r); return; }
@@ -844,22 +869,37 @@ const BillSplitter = () => {
                     <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-sm text-blue-800 space-y-2">
                         <div className="flex gap-2 items-start">
                             <Lightbulb size={16} className="mt-0.5 flex-shrink-0 text-blue-600"/>
-                            <p>小撇步：可以拍下帳單，請你的 ChatGPT 或 Gemini 幫你轉換成純文字明細後直接貼過來。指令也幫你準備好了，點下方按鈕複製！</p>
+                            <div>
+                                <p className="font-bold">懶得打字？拍帳單給 AI 就好</p>
+                                <p className="text-xs mt-1 leading-relaxed">
+                                    <strong>① 拍下帳單</strong>傳給 ChatGPT 或 Gemini →
+                                    <strong> ② 複製下面的指令</strong>一起貼過去 →
+                                    <strong> ③ 把 AI 回覆的明細貼回這裡</strong>
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-white p-2 rounded-lg border border-blue-200">
-                            <textarea 
+                        <button
+                            onClick={handleCopyPrompt}
+                            className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all ${copyPromptSuccess ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
+                        >
+                            {copyPromptSuccess ? '✓ 已複製，貼給 AI 就好' : '📋 複製給 AI 的指令'}
+                        </button>
+                        <button
+                            onClick={() => setShowPrompt(v => !v)}
+                            className="w-full text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
+                        >
+                            {showPrompt ? '收起指令內容' : '看看指令寫了什麼（可自行修改）'}
+                            <ChevronDown size={12} className={showPrompt ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                        </button>
+                        {showPrompt && (
+                            <textarea
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
-                                className="w-full text-xs text-slate-600 outline-none resize-none bg-transparent"
-                                rows="2"
+                                aria-label="給 AI 的指令"
+                                className="w-full bg-white p-2 rounded-lg border border-blue-200 text-[11px] leading-relaxed text-slate-600 outline-none resize-y font-mono"
+                                rows="12"
                             ></textarea>
-                            <button 
-                                onClick={handleCopyPrompt}
-                                className={`w-full mt-1 py-1.5 rounded text-xs font-bold transition-all ${copyPromptSuccess ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}`}
-                            >
-                                {copyPromptSuccess ? '已複製指令！' : '複製給 AI 的指令'}
-                            </button>
-                        </div>
+                        )}
                     </div>
 
                     <div className="flex-1 flex flex-col">
