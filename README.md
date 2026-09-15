@@ -4,9 +4,9 @@
 
 ### 聚餐友善分帳機
 
-**Someone's vegetarian, someone skipped the drinks, someone only had a dish or two — group meals are never fair to split evenly. Here, everyone just pays for what they ate.**
+**Vegetarians, non-drinkers, people who only had a dish or two — group meals are hard to split fairly. Let everyone pay for just what they ate.**
 
-**聚餐後分錢，總卡在吃素的、沒喝酒的、只吃幾道菜的人？讓每個人只付自己吃的那份，分帳一次講清楚。**
+**吃素的、沒喝酒的、只吃幾道菜的——聚餐分帳很難喬？讓每個人只付自己吃的。**
 
 <br>
 
