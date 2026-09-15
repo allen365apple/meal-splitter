@@ -8,7 +8,7 @@
 
 ### 👉 [**Open the app / 開始使用**](https://allen365apple.github.io/meal-splitter/) 👈
 
-No install. No sign-up. No account. Works in any phone browser.<br>
+Bilingual (English / 繁體中文). No install. No sign-up. No account. Works in any phone browser.<br>
 免安裝、免註冊、免帳號，手機瀏覽器直接開。
 
 **[English](#english) · [繁體中文](#繁體中文)**
