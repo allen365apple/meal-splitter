@@ -1,19 +1,34 @@
 <div align="center">
 
-# 💸 Meal Splitter<br>聚餐友善分帳機
+# 💸 Meal Splitter — 聚餐友善分帳機
 
-**Split a group meal bill by what each person actually ate — not by dividing the total.**
+### Fair, itemised bill splitter for group meals — everyone pays for what they actually ate, not the total ÷ heads.
+### 聚餐分帳工具：誰吃了什麼就付什麼，不是把總額除以人數硬均攤。
 
-**誰吃了什麼就付什麼，不是把總額除以人數。**
+**Free · No sign-up · No app to install · Works in any phone browser · English + 繁體中文**
+**免費、免註冊、免安裝，手機瀏覽器直接開，中英雙語**
 
-### 👉 [**Open the app / 開始使用**](https://allen365apple.github.io/meal-splitter/) 👈
-
-Bilingual (English / 繁體中文). No install. No sign-up. No account. Works in any phone browser.<br>
-免安裝、免註冊、免帳號，手機瀏覽器直接開。
-
-**[English](#english) · [繁體中文](#繁體中文)**
+## 👉 [**Open the app · 立即使用**](https://allen365apple.github.io/meal-splitter/) 👈
 
 </div>
+
+> **In one line:** paste or type the dishes, tick who ate each one, and it works out exactly what each person owes — down to the last dollar — as a message you can drop straight into your group chat.
+>
+> **一句話：** 把菜貼上或輸入、勾選每道菜誰有吃，它就算出每個人該付多少（精確到 1 元不差），產出一段可以直接貼進群組的訊息。
+
+**What it handles that "just split it evenly" can't — 平均分做不到、但它做得到的：**
+
+🥦 vegetarians & dietary restrictions · 🍺 drinks nobody shares equally · 🍽️ one steak among six set menus · ⚖️ someone who ate two portions · 🎁 treating a friend · 💳 who paid first & who owes whom · 🧮 service charge & fixed extras · 🔢 numbers that always add up to the exact total
+
+🥦 有人吃素／有飲食限制 · 🍺 酒水喝得不平均 · 🍽️ 六個套餐裡一份牛排 · ⚖️ 有人吃了兩份 · 🎁 請客 · 💳 誰先付、誰該轉錢給誰 · 🧮 服務費與固定加收 · 🔢 金額永遠對得上總額
+
+**Also — 還有：** 📋 paste a whole receipt at once · 🤖 photograph the bill & let ChatGPT/Gemini turn it into text · 💾 auto-saves in your browser · 📲 add to home screen like an app
+
+📋 整張帳單一次貼上 · 🤖 拍帳單請 ChatGPT／Gemini 轉文字 · 💾 自動存在瀏覽器 · 📲 可加到主畫面像 App 一樣用
+
+<sub>**Keywords:** bill splitter · split the bill · split a restaurant bill · itemised / itemized bill split · group dining · dinner bill calculator · who-owes-what · fair split · AA · PWA · 分帳 · 分帳工具 · 聚餐分帳 · 帳單分攤 · AA 制 · 均攤 · 拆帳 · 誰吃什麼付什麼</sub>
+
+**Jump to — 跳到：** [English](#english) · [繁體中文](#繁體中文)
 
 ---
 
