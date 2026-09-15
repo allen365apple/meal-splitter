@@ -221,9 +221,10 @@ const BillSplitter = () => {
     const SETTLE_MS = 350;   // 切換後的冷卻時間，等版面高度變化與捲動夾動結束再重新判斷
     const compactRef = useRef(false);
     const lastFlipRef = useRef(0);
-    // 使用者主動展開（點輸入欄或按展開鈕）後就先鎖住，
-    // 否則手指一滑又被自動收起來，根本沒辦法選人。
-    const manualExpandRef = useRef(false);
+    // 使用者手動切換過就先鎖住，否則會馬上被捲動邏輯彈回去：
+    // 'expanded'  → 手動展開（點輸入欄或展開鈕），滑動時不要自動收起
+    // 'collapsed' → 手動收起，還在頂端時不要自動展開
+    const overrideRef = useRef(null);
     useEffect(() => {
         let raf = 0;
         let recheck = 0;
@@ -240,9 +241,11 @@ const BillSplitter = () => {
                 if (!recheck) recheck = setTimeout(() => { recheck = 0; evaluate(); }, SETTLE_MS + 30);
                 return;
             }
-            else if (!compactRef.current && y > getCollapseAt() && !manualExpandRef.current) next = true;
-            else if (compactRef.current && y < EXPAND_AT) next = false;
-            if (y < EXPAND_AT) manualExpandRef.current = false;   // 回到頂端就解鎖
+            else if (!compactRef.current && y > getCollapseAt() && overrideRef.current !== 'expanded') next = true;
+            else if (compactRef.current && y < EXPAND_AT && overrideRef.current !== 'collapsed') next = false;
+            // 解鎖時機：回到頂端解除「手動展開」；往下滑過門檻解除「手動收起」
+            if (y < EXPAND_AT && overrideRef.current === 'expanded') overrideRef.current = null;
+            if (y > getCollapseAt() && overrideRef.current === 'collapsed') overrideRef.current = null;
             if (next !== compactRef.current) {
                 compactRef.current = next;
                 lastFlipRef.current = Date.now();
@@ -258,7 +261,9 @@ const BillSplitter = () => {
     // 手動展開／收合時，ref 要跟著同步，否則捲動判斷會用到舊值
     const setCompact = (v) => { compactRef.current = v; lastFlipRef.current = Date.now(); setIsHeaderCompact(v); };
     // 點輸入欄就展開（並鎖住不自動收起）
-    const expandForInput = () => { if (compactRef.current) { manualExpandRef.current = true; setCompact(false); } };
+    const expandForInput = () => { if (compactRef.current) { overrideRef.current = 'expanded'; setCompact(false); } };
+    // 使用者手動切換上方輸入窗格
+    const toggleCompact = () => { const next = !compactRef.current; overrideRef.current = next ? 'collapsed' : 'expanded'; setCompact(next); };
 
     // --- 邏輯函數 ---
     const addTag = () => { if (!newTagName) return; const newTag = { id: Date.now().toString(), name: newTagName, emoji: newTagEmoji }; setTags([...tags, newTag]); setNewTagName(''); };
@@ -311,7 +316,7 @@ const BillSplitter = () => {
         const parsedPrice = parseFloat(newItemPrice);
         if (!isFinite(parsedPrice) || parsedPrice === 0) { alert('請輸入有效金額。\n\n不能是 0 或空白。\n如果要輸入折扣，請打負數，例如 -50。'); return; }
         if (Math.abs(parsedPrice) > 9999999) { alert('金額好像太大了，請確認一下。'); return; }
-        let type = 'custom'; let typeLabel = '自訂名單'; const allIds = users.map(u => u.id); if (users.length === currentSharers.length && users.every(u => currentSharers.includes(u.id))) { type = 'all'; typeLabel = '大家都有'; } else { for (const tag of tags) { const tagUserIds = users.filter(u => u.tagId === tag.id).map(u => u.id); if (tagUserIds.length > 0 && tagUserIds.length === currentSharers.length && tagUserIds.every(id => currentSharers.includes(id))) { type = tag.id; typeLabel = `${tag.emoji} ${tag.name}`; break; } } } const newItem = { id: Date.now(), name: newItemName.trim(), price: parsedPrice, type, typeLabel, sharedBy: [...currentSharers] }; setItems([...items, newItem]); setNewItemName(''); setNewItemPrice(''); manualExpandRef.current = false; };
+        let type = 'custom'; let typeLabel = '自訂名單'; const allIds = users.map(u => u.id); if (users.length === currentSharers.length && users.every(u => currentSharers.includes(u.id))) { type = 'all'; typeLabel = '大家都有'; } else { for (const tag of tags) { const tagUserIds = users.filter(u => u.tagId === tag.id).map(u => u.id); if (tagUserIds.length > 0 && tagUserIds.length === currentSharers.length && tagUserIds.every(id => currentSharers.includes(id))) { type = tag.id; typeLabel = `${tag.emoji} ${tag.name}`; break; } } } const newItem = { id: Date.now(), name: newItemName.trim(), price: parsedPrice, type, typeLabel, sharedBy: [...currentSharers] }; setItems([...items, newItem]); setNewItemName(''); setNewItemPrice(''); overrideRef.current = null; };
     // --- 請客 ---
     const userName = (id) => { const u = users.find(x => x.id === id); return u ? u.name : '？'; };
     const openTreatPicker = (beneficiaryId) => {
@@ -1331,60 +1336,82 @@ const BillSplitter = () => {
                 {step === 3 && !(isReviewing && liveReviewIds.length > 0) && (
                 <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-6 lg:items-start animate-fade-in">
                     {/* Sticky Header with Smooth Transition */}
-                    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-[72px] z-10 transition-all duration-300 ease-in-out ${isHeaderCompact ? 'p-2 shadow-md rounded-b-xl' : 'p-4 rounded-2xl'}`}>
-                        
-                        {/* 提示區塊：在 Compact 模式時隱藏 */}
-                        <div className={`overflow-hidden transition-all duration-300 ${isHeaderCompact ? 'max-h-0 opacity-0 mb-0' : 'max-h-24 opacity-100 mb-4'}`}>
-                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex gap-2 items-start">
-                                <Lightbulb size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                                <div className="text-xs text-blue-700 leading-relaxed"><strong>小撇步：</strong> 可以一次貼上大量的文字明細，直接匯入！</div>
-                            </div>
-                        </div>
+                    {/* 上方輸入窗格。精簡原則：展開時也只留必要的東西，
+                        收起時縮到「品項＋金額＋加入」一列半。切換鈕只用一個箭頭符號。 */}
+                    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-[72px] z-10 transition-all duration-300 ease-in-out ${isHeaderCompact ? 'p-2 shadow-md rounded-b-xl' : 'p-3 rounded-2xl'}`}>
 
-                        {/* 輸入區 */}
-                        <div className={`flex transition-all duration-300 ${isHeaderCompact ? 'flex-row gap-2 mb-2' : 'flex-col gap-3 mb-4'}`}>
-                            <input type="text" placeholder="品項 (如: 椒麻雞 / 啤酒)" aria-label="品項名稱" maxLength={40} className={`bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-400 w-full transition-all ${isHeaderCompact ? 'w-1/2 py-2 px-2 text-sm' : 'w-full px-3 py-3'}`} value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onFocus={expandForInput} />
-                            <div className={`flex gap-2 ${isHeaderCompact ? 'w-1/2' : 'w-full'}`}>
-                                <input type="number" step="any" inputMode="decimal" placeholder="$金額" className={`flex-1 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-400 transition-all ${isHeaderCompact ? 'py-2 px-2 text-sm' : 'px-3 py-3'}`} value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} onFocus={expandForInput} />
-                                <button onClick={openCalculator} aria-label="打開計算機" title="計算機" className={`bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 active:scale-95 transition-colors border border-slate-200 ${isHeaderCompact ? 'p-2' : 'p-3'}`}><CalculatorIcon size={24} /></button>
-                            </div>
-                            {/* 貼上按鈕：在 Compact 模式隱藏 */}
-                            {!isHeaderCompact && (
-                                <button onClick={() => setShowImportModal(true)} className="w-full py-2 bg-slate-100 text-slate-500 rounded-lg text-sm font-bold flex items-center justify-center gap-1 hover:bg-slate-200 transition-colors"><PasteIcon size={16}/> 📝 貼上文字明細</button>
-                            )}
-                        </div>
-
-                        {/* 選人區：Compact 模式時隱藏詳細選人 */}
-                        <div className={`${isHeaderCompact ? 'mb-2' : 'mb-4'}`}>
-                            {/* 標題與人數統計：Compact 模式隱藏 */}
-                            <div className={`flex justify-between items-center transition-all duration-300 ${isHeaderCompact ? 'max-h-0 opacity-0 mb-0 overflow-hidden' : 'max-h-8 opacity-100 mb-2'}`}>
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">這道菜誰有吃？</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-green-600 font-medium">{currentSharers.length} 人分攤</span>
+                        {/* 品項自己一行，金額那一列放計算機與貼上明細。
+                            收起時為了壓高度才把兩者併成一列（反正一點輸入欄就會展開）。 */}
+                        <div className={isHeaderCompact ? 'flex gap-2 items-stretch mb-2' : 'space-y-2 mb-2'}>
+                            <input type="text" placeholder="品項（如：椒麻雞）" aria-label="品項名稱" maxLength={40}
+                                className={`min-w-0 w-full bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-green-400 px-3 py-2.5 text-sm transition-all ${isHeaderCompact ? 'flex-1' : ''}`}
+                                value={newItemName} onChange={(e) => setNewItemName(e.target.value)} onFocus={expandForInput} />
+                            <div className={`flex gap-2 items-stretch ${isHeaderCompact ? 'flex-shrink-0' : ''}`}>
+                                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 focus-within:ring-2 focus-within:ring-green-400 flex-1">
+                                    <span className="text-slate-400 text-sm">$</span>
+                                    <input type="number" step="any" inputMode="decimal" placeholder="金額" aria-label="金額"
+                                        className={`bg-transparent text-right outline-none py-2.5 text-sm ${isHeaderCompact ? 'w-16' : 'w-full'}`}
+                                        value={newItemPrice} onChange={(e) => setNewItemPrice(e.target.value)} onFocus={expandForInput} />
                                 </div>
-                            </div>
-                            
-                            {/* 快速標籤列：compact 時整列收掉，讓窗格縮到最小 */}
-                            {!isHeaderCompact && (
-                                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-3">
-                                    <button onClick={() => selectGroup('all')} className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 whitespace-nowrap shadow-sm">全選</button>
-                                    {tags.map(tag => (<button key={tag.id} onClick={() => selectGroup(tag.id)} className="px-3 py-1.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-green-50 hover:border-green-200 hover:text-green-700 flex items-center gap-1 whitespace-nowrap transition-colors"><span>{tag.emoji}</span> {tag.name}</button>))}
-                                </div>
-                            )}
-
-                            {/* 九宮格選人 - Compact 時隱藏 */}
-                            <div className={`grid grid-cols-3 sm:grid-cols-4 gap-2 overflow-hidden transition-all duration-300 ${isHeaderCompact ? 'max-h-0 opacity-0' : 'max-h-64 sm:max-h-80 opacity-100'}`}>
-                                {users.map(u => { const isSelected = currentSharers.includes(u.id); const userTag = tags.find(t => t.id === u.tagId); return (<button key={u.id} onClick={() => toggleSharer(u.id)} className={`py-2 px-1 rounded-lg text-xs font-bold border transition-all relative overflow-hidden ${isSelected ? 'bg-green-500 text-white border-green-500 shadow-sm' : 'bg-white text-slate-400 border-slate-200'}`}>{userTag && (<span className={`absolute -right-1 -bottom-2 text-3xl opacity-10 pointer-events-none grayscale ${isSelected ? 'invert' : ''}`}>{userTag.emoji}</span>)}<span className="relative z-10">{u.name}</span></button>); })}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={addItem} disabled={!newItemName || !newItemPrice || currentSharers.length === 0} className={`flex-1 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-900 disabled:bg-slate-300 disabled:shadow-none transition-all flex items-center justify-center gap-2 ${isHeaderCompact ? 'py-2 text-sm' : 'py-3'}`}><Plus size={18} /> 加入清單</button>
-                            {isHeaderCompact && (
-                                <button onClick={() => { manualExpandRef.current = true; setCompact(false); }} aria-label="展開選人區" title="展開選人區"
-                                    className="flex-shrink-0 flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-2 rounded-xl hover:bg-slate-200">
-                                    {currentSharers.length}人 <ChevronDown size={14}/>
+                                <button onClick={openCalculator} aria-label="打開計算機" title="計算機"
+                                    className="flex-shrink-0 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 active:scale-95 transition-colors border border-slate-200 px-2.5">
+                                    <CalculatorIcon size={20} />
                                 </button>
-                            )}
+                                {!isHeaderCompact && (
+                                    <button onClick={() => setShowImportModal(true)} aria-label="貼上文字明細" title="貼上文字明細，一次匯入整張帳單"
+                                        className="flex-shrink-0 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 active:scale-95 transition-colors border border-slate-200 px-2.5">
+                                        <PasteIcon size={20} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 展開時：選人區 */}
+                        {!isHeaderCompact && (
+                            <>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-bold text-slate-400 flex-shrink-0">誰有吃</span>
+                                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
+                                        <button onClick={() => selectGroup('all')} className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-white hover:bg-slate-700 whitespace-nowrap flex-shrink-0">全選</button>
+                                        {tags.map(tag => (
+                                            <button key={tag.id} onClick={() => selectGroup(tag.id)} className="px-2.5 py-1 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:bg-green-50 hover:border-green-200 hover:text-green-700 whitespace-nowrap flex-shrink-0">
+                                                {tag.emoji}{tag.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 mb-2">
+                                    {users.map(u => {
+                                        const isSelected = currentSharers.includes(u.id);
+                                        const userTag = tags.find(t => t.id === u.tagId);
+                                        return (
+                                            <button key={u.id} onClick={() => toggleSharer(u.id)}
+                                                className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition-all truncate ${isSelected ? 'bg-green-500 text-white border-green-500' : 'bg-white text-slate-400 border-slate-200'}`}>
+                                                {userTag ? userTag.emoji : ''}{u.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* 加入清單 */}
+                        <button onClick={addItem} disabled={!newItemName || !newItemPrice || currentSharers.length === 0}
+                            className={`w-full bg-slate-800 text-white rounded-lg font-bold shadow hover:bg-slate-900 disabled:bg-slate-300 disabled:shadow-none transition-all flex items-center justify-center gap-1.5 text-sm ${isHeaderCompact ? 'py-2' : 'py-2.5'}`}>
+                            <Plus size={16} /> 加入清單
+                            {!isHeaderCompact && <span className="font-normal text-slate-400">· {currentSharers.length}人</span>}
+                        </button>
+
+                        {/* 底部收合把手：整排都能按，比角落的小箭頭好按很多。
+                            外層 div 用負邊距撐滿到卡片邊緣，按鈕在裡面填滿，
+                            不依賴 display 類別的優先順序。 */}
+                        <div className={`border-t border-slate-100 ${isHeaderCompact ? '-mx-2 -mb-2 mt-1.5' : '-mx-3 -mb-3 mt-2'}`}>
+                            <button onClick={toggleCompact}
+                                aria-label={isHeaderCompact ? '展開輸入區' : '收起輸入區'}
+                                title={isHeaderCompact ? '展開輸入區，選誰有吃' : '收起輸入區，方便看下面的清單'}
+                                className={`w-full flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors rounded-b-2xl ${isHeaderCompact ? 'py-1.5' : 'py-2'}`}>
+                                {isHeaderCompact ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                            </button>
                         </div>
                     </div>
 
