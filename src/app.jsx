@@ -1396,7 +1396,8 @@ const BillSplitter = () => {
                         <button onClick={resetAll} className="text-xs font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 px-3 py-1.5 rounded-full hover:bg-red-50 transition-colors">
                             <Trash2 size={12}/> {t('清空這桌，重新開始')}
                         </button>
-                        <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full">{t('Designed by 王柏文')}</span>
+                        <a href="https://github.com/allen365apple/meal-splitter" target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full hover:bg-slate-200 hover:text-slate-600 transition-colors">{t('Designed by 王柏文')}</a>
                         {savedAt && <span className="text-[10px] text-slate-300">{tf('已自動儲存 · {0}', new Date(savedAt).toLocaleTimeString(isEn ? 'en-GB' : 'zh-TW'))}</span>}
                     </div>
                 </div>
