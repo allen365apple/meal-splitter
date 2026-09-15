@@ -1410,7 +1410,7 @@ const BillSplitter = () => {
                     {/* Sticky Header with Smooth Transition */}
                     {/* 上方輸入窗格。精簡原則：展開時也只留必要的東西，
                         收起時縮到「品項＋金額＋加入」一列半。切換鈕只用一個箭頭符號。 */}
-                    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-[72px] z-10 transition-all duration-300 ease-in-out ${isHeaderCompact ? 'p-2 shadow-md rounded-b-xl' : 'p-3 rounded-2xl'}`}>
+                    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-[72px] z-10 transition-all duration-300 ease-in-out lg:max-h-[calc(100dvh-150px)] lg:overflow-y-auto ${isHeaderCompact ? 'p-2 shadow-md rounded-b-xl' : 'p-3 rounded-2xl'}`}>
 
                         {/* 品項自己一行，金額那一列放計算機與貼上明細。
                             收起時為了壓高度才把兩者併成一列（反正一點輸入欄就會展開）。 */}
