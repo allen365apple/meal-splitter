@@ -1,6 +1,6 @@
-// 最後更新：2026-11-23 09:50（台北時間）
+// 最後更新：2026-11-23 10:30（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：手機上「拍帳單」直接開系統相機（鏡頭可切換）、另有從相簿選；全站用字精簡；補上幾處英文模式殘留的中文
+// 修改摘要：匯入視窗改成「拍照」「上傳照片」兩顆並排按鈕讓人自己選（電腦只顯示上傳）
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -992,18 +992,26 @@ const BillSplitter = () => {
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            <button onClick={() => { const el = isTouchDevice ? cameraInputRef.current : photoInputRef.current; if (el) el.click(); }}
-                                className="w-full flex flex-col items-center justify-center gap-1.5 py-6 rounded-xl border-2 border-dashed border-green-400 bg-green-50 hover:bg-green-100 active:scale-[0.99] transition-all">
-                                <span className="text-3xl">📸</span>
-                                <span className="font-bold text-green-800">{isTouchDevice ? t('拍帳單') : tf('選帳單照片（最多 {0} 張）', MAX_PHOTOS)}</span>
-                                <span className="text-xs text-green-700">{t('AI 會讀出每道菜和金額')}</span>
-                            </button>
-                            {isTouchDevice && (
-                                <button onClick={() => photoInputRef.current && photoInputRef.current.click()}
-                                    className="w-full py-2.5 rounded-xl border border-green-200 bg-white text-sm font-bold text-green-700 hover:bg-green-50 transition-colors">
-                                    🖼️ {tf('從相簿選（最多 {0} 張）', MAX_PHOTOS)}
-                                </button>
-                            )}
+                            {/* 兩種都給：拍照（直接開手機相機）或上傳已經拍好的照片；電腦沒有相機，只給上傳 */}
+                            <div className="rounded-xl border-2 border-dashed border-green-400 bg-green-50 p-4 text-center space-y-3">
+                                <div>
+                                    <p className="font-bold text-green-800">📸 {t('讓 AI 讀帳單')}</p>
+                                    <p className="text-xs text-green-700 mt-0.5">{t('AI 會讀出每道菜和金額')}</p>
+                                </div>
+                                <div className={`grid gap-2 ${isTouchDevice ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                    {isTouchDevice && (
+                                        <button onClick={() => cameraInputRef.current && cameraInputRef.current.click()}
+                                            className="py-3 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm">
+                                            📷 {t('拍照')}
+                                        </button>
+                                    )}
+                                    <button onClick={() => photoInputRef.current && photoInputRef.current.click()}
+                                        className="py-3 rounded-xl bg-green-600 text-white font-bold text-sm hover:bg-green-700 active:scale-[0.98] transition-all shadow-sm">
+                                        🖼️ {t('上傳照片')}
+                                    </button>
+                                </div>
+                                <p className="text-[11px] text-green-700">{tf('上傳最多 {0} 張', MAX_PHOTOS)}</p>
+                            </div>
                             <p className="text-[11px] text-slate-400 leading-relaxed text-center">{t('照片會送到 Google Gemini 辨識，本站不保存；Google 可能用來改善服務。')}</p>
                         </div>
                     )}

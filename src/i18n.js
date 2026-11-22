@@ -1,6 +1,6 @@
-// 最後更新：2026-11-23 09:50（台北時間）
+// 最後更新：2026-11-23 10:30（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：配合全站用字精簡更新中文原文；補拍照、相簿按鈕與漏接的英文翻譯
+// 修改摘要：匯入視窗改成「拍照」「上傳照片」兩顆按鈕，更新對應英文
 
 // 介面語言。以中文原文當 key，這樣原始碼讀起來還是中文、好維護。
 // 找不到對應翻譯時就原樣顯示，不會變成空白或 key 名稱。
@@ -194,10 +194,11 @@ export const EN = {
   '匯入整張帳單': 'Import the whole bill',
   'AI 正在讀帳單…': 'AI is reading the bill…',
   '通常 10 到 30 秒': 'Usually 10–30 seconds',
-  '拍帳單': 'Snap the receipt',
-  '選帳單照片（最多 {0} 張）': 'Choose receipt photos (up to {0})',
   'AI 會讀出每道菜和金額': 'AI reads every dish and price',
-  '從相簿選（最多 {0} 張）': 'Choose from photos (up to {0})',
+  '讓 AI 讀帳單': 'Let AI read the receipt',
+  '拍照': 'Take photo',
+  '上傳照片': 'Upload photo',
+  '上傳最多 {0} 張': 'Upload up to {0}',
   '照片會送到 Google Gemini 辨識，本站不保存；Google 可能用來改善服務。': "Photos are sent to Google Gemini to be read. This site doesn't keep them; Google may use them to improve its services.",
   '收起手動貼上': 'Hide manual paste',
   '想自己貼明細？點這裡': 'Prefer to paste the bill yourself? Tap here',
