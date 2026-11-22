@@ -1,3 +1,8 @@
+<!--
+最後更新：2026-11-23 07:10（台北時間）
+誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
+修改摘要：功能表加上拍照讀帳單，隱私說明改成「拍照會送 Google Gemini，自己貼完全在本機」
+-->
 <div align="center">
 
 # 💸 Meal Splitter
@@ -72,7 +77,7 @@ Dividing the total makes the light eaters quietly subsidise the heavy ones. This
 |---|---|
 | 🏷️ **Group tags** | Tag people as `😋 regular`, `🥦 vegetarian`, `🍺 drinking`, `👶 kids` — anything you like. Then assign a dish to a whole group with one tap. |
 | 📋 **Paste a whole bill at once** | Paste the itemised receipt as text and it parses every line. Handles thousands separators (`$1,200`), discounts (`-50`), and skips receipt noise (subtotal, service charge, tax, phone number…). |
-| 🤖 **Photo → text via AI** | Can't be bothered typing? Photograph the receipt, ask ChatGPT or Gemini to turn it into plain text, paste it in. The app gives you the prompt to copy. |
+| 📸 **Snap the receipt** | Take a photo (or pick up to 3) and Gemini reads every dish and price for you — multi-portion lines are split one portion per row, service charges are set aside. Prefer not to upload? Copy the built-in prompt into ChatGPT or Gemini yourself and paste the reply; even if the reply loses its line breaks, the app splits it back. |
 | 🃏 **One-dish-at-a-time review** | After a bulk import, the app walks you through the dishes one card at a time so you can tick who ate what — instead of going back and poking at a long list. Editable names and prices, so parsing mistakes get fixed on the spot. |
 | ⚖️ **Portion weights** | Someone had two servings? Set their portion to 2 instead of entering the dish twice. |
 | 🎁 **Treating someone** | Mark that someone's share is being covered, and by whom. Their itemised total stays visible and correct — the treat is recorded as a note, so nobody's breakdown gets polluted. |
@@ -107,7 +112,9 @@ Dividing the total makes the light eaters quietly subsidise the heavy ones. This
 
 ### Privacy
 
-Everything runs in your browser. There is no backend, no account, no analytics, and no data leaves your device. Your saved table lives in your own browser's local storage and is never uploaded.
+Everything runs in your browser — no account, no analytics. Your saved table lives in your own browser's local storage and is never uploaded.
+
+The one exception is **photo reading**: when you use it, the receipt photo is sent through a small relay to Google Gemini to read the items. This site doesn't store it, but Google may use it to improve its services. If you'd rather keep everything on your device, use the paste option instead — that path never leaves your browser.
 
 ### Tech notes
 
@@ -161,7 +168,7 @@ MIT. Use it, fork it, deploy your own copy.
 |---|---|
 | 🏷️ **群組標籤** | 把成員標成 `😋 一般`、`🥦 吃素`、`🍺 喝酒`、`👶 小孩`，想加什麼都可以。之後一鍵就能把某道菜分給整個群組。 |
 | 📋 **整張帳單一次貼上** | 把明細貼進去，它會逐行解析。**支援千分位**（`$1,200`）、**折扣負數**（`-50`），並自動跳過小計、服務費、稅額、電話這類收據雜訊。 |
-| 🤖 **拍照 → 文字（用 AI）** | 懶得打字？拍下帳單，請 ChatGPT 或 Gemini 轉成純文字再貼過來。App 裡直接有指令可以複製。 |
+| 📸 **拍照直接讀帳單** | 拍照或選照片（最多 3 張），Gemini 會讀出每道菜和金額；同一道點多份會拆成一份一筆，服務費另外放。不想上傳照片？也可以複製 App 裡的指令自己問 ChatGPT 或 Gemini 再貼回來，就算回覆的換行不見、黏成一行，也拆得回來。 |
 | 🃏 **逐筆卡片檢視** | 大量匯入後，會**一道菜一張卡片**帶你確認誰有吃，不用自己回頭在長清單裡一個一個點。卡片上還能直接改品名和金額，解析錯了當場修掉。 |
 | ⚖️ **份數權重** | 有人吃了兩份？把份數設成 2 就好，不用把同一道菜輸入兩次。 |
 | 🎁 **請客註記** | 標記某個人的金額由誰來請。**他自己的明細和金額完整保留**，請客只是附註，不會把別人的明細弄亂。 |
@@ -196,7 +203,9 @@ MIT. Use it, fork it, deploy your own copy.
 
 ### 隱私
 
-全部在你的瀏覽器裡執行。**沒有後端、沒有帳號、沒有分析追蹤，任何資料都不會離開你的裝置。** 存檔只存在你自己瀏覽器的本機儲存空間，不會上傳。
+全部在你的瀏覽器裡執行，**沒有帳號、沒有分析追蹤。** 存檔只存在你自己瀏覽器的本機儲存空間，不會上傳。
+
+唯一的例外是**拍照辨識**：使用時，帳單照片會經過一個小型中繼站送到 Google Gemini 讀取品項。本站不保存照片，但 Google 可能拿來改善服務。想讓資料完全不離開裝置，就用「自己貼明細」，那條路完全在你的瀏覽器裡完成。
 
 ### 技術說明
 

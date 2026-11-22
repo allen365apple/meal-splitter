@@ -1,6 +1,12 @@
+// 最後更新：2026-11-23 09:50（台北時間）
+// 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
+// 修改摘要：手機上「拍帳單」直接開系統相機（鏡頭可切換）、另有從相簿選；全站用字精簡；補上幾處英文模式殘留的中文
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { makeT, makeTf } from './i18n.js';
+import { splitImportText } from './import-split.js';
+import { readReceipt, MAX_PHOTOS } from './receipt-photo.js';
 
 // --- Icon Components ---
 const IconWrapper = ({ children, size = 24, className = "" }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>);
@@ -79,14 +85,22 @@ const BillSplitter = () => {
     const [pendingReviewIds, setPendingReviewIds] = useState([]);
     const [importText, setImportText] = useState('');
     const APP_URL = 'https://allen365apple.github.io/meal-splitter/';
-    const AI_PROMPT_ZH = '請把這張帳單照片轉成純文字明細，嚴格照下面規則輸出：\n\n1. 每一行只寫「品名 金額」，中間一個半形空格。例：高麗菜 160\n2. 金額只寫阿拉伯數字，不要加逗號、$、元等符號。\n3. 同一道菜點了多份時，務必拆成多行分開列，不要合併成一行。\n   例：帳單上是「高麗菜 3份 480」，請輸出：\n   高麗菜第一份 160\n   高麗菜第二份 160\n   高麗菜第三份 160\n   原因：每一份可能是不同的人吃的，合併成一筆就沒辦法分帳。\n   若帳單只有總價沒有單價，請自行除以份數算出單價。\n4. 折扣、折抵請用負數。例：折扣 -50\n5. 服務費、清潔費、開瓶費請放在全部明細的最後面，各自獨立一行。\n   例：服務費 88\n6. 不要列出小計、總計、應付、實收、找零、發票號碼、統一編號、日期、時間、桌號、人數等非消費項目。\n7. 看不清楚的品名就寫 ?，例如：? 120。不要猜，也不要整行省略。\n8. 只輸出明細本身。不要加標題、編號、條列符號、表格、程式碼框或任何說明文字。\n9. 全部用繁體中文。\n\n如果有任何看不清楚或不確定的地方，請在所有明細之後空一行、加一行 --- ，再寫你的說明。\n\n輸出範例：\n宮保雞丁 180\n高麗菜第一份 160\n高麗菜第二份 160\n台灣啤酒 120\n折扣 -50\n服務費 88';
-    const AI_PROMPT_EN = 'Please convert this receipt photo into a plain-text itemised list, following these rules exactly:\n\n1. One line per item: "item name<space>amount". Example: Cabbage 160\n2. Amounts: digits only. No commas, no currency symbols.\n3. If the same dish was ordered multiple times, split it into separate lines. Do NOT combine them.\n   Example: the receipt shows "Cabbage 3x 480", output:\n   Cabbage 1st 160\n   Cabbage 2nd 160\n   Cabbage 3rd 160\n   Why: each portion may have been eaten by a different person, so a combined line cannot be split fairly.\n   If the receipt only shows a total, divide it by the quantity to get the unit price.\n4. Discounts and vouchers as negative numbers. Example: Discount -50\n5. Service charge, cleaning fee and corkage go at the very end, each on its own line.\n   Example: Service charge 88\n6. Do NOT list subtotal, total, amount due, cash received, change, invoice number, tax ID, date, time, table number or party size.\n7. If an item name is unreadable, write ?. Example: ? 120. Do not guess, and do not skip the line.\n8. Output the list only. No heading, no numbering, no bullet points, no table, no code block, no commentary.\n\nIf anything was unclear, leave a blank line after the list, then a line with --- , then your notes.\n\nExample output:\nKung Pao Chicken 180\nCabbage 1st 160\nCabbage 2nd 160\nTaiwan Beer 120\nDiscount -50\nService charge 88';
+    const AI_PROMPT_ZH = '請把這張帳單照片轉成純文字明細，嚴格照下面規則輸出：\n\n1. 整份明細放在「一個程式碼框」裡輸出（用 ``` 包起來），這樣複製時才不會把換行弄丟。\n2. 每一筆一行，格式是「品名 金額；」，金額後面加一個全形分號。例：高麗菜 160；\n3. 金額只寫阿拉伯數字，不要加逗號、$、元等符號。\n4. 同一道菜點了多份時，務必拆成多行分開列，不要合併成一行。\n   例：帳單上是「高麗菜 3份 480」，請輸出：\n   高麗菜第一份 160；\n   高麗菜第二份 160；\n   高麗菜第三份 160；\n   原因：每一份可能是不同的人吃的，合併成一筆就沒辦法分帳。\n   若帳單只有總價沒有單價，請自行除以份數算出單價。\n5. 折扣、折抵請用負數。例：折扣 -50；\n6. 服務費、清潔費、開瓶費請放在全部明細的最後面，各自獨立一行。例：服務費 88；\n7. 不要列出小計、總計、應付、實收、找零、發票號碼、統一編號、日期、時間、桌號、人數等非消費項目。\n8. 看不清楚的品名就寫 ?，例如：? 120；。不要猜，也不要整行省略。\n9. 程式碼框裡只放明細：不要加標題、編號、條列符號或表格。全部用繁體中文。\n\n如果有任何看不清楚或不確定的地方，請寫在程式碼框的下方，框裡不要放說明。\n\n輸出範例：\n```\n宮保雞丁 180；\n高麗菜第一份 160；\n高麗菜第二份 160；\n台灣啤酒 120；\n折扣 -50；\n服務費 88；\n```';
+    const AI_PROMPT_EN = 'Please convert this receipt photo into a plain-text itemised list, following these rules exactly:\n\n1. Put the whole list inside ONE code block (wrapped in ```), so line breaks survive copying.\n2. One item per line, formatted "item name<space>amount;" with a semicolon after the amount. Example: Cabbage 160;\n3. Amounts: digits only. No commas, no currency symbols.\n4. If the same dish was ordered multiple times, split it into separate lines. Do NOT combine them.\n   Example: the receipt shows "Cabbage 3x 480", output:\n   Cabbage 1st 160;\n   Cabbage 2nd 160;\n   Cabbage 3rd 160;\n   Why: each portion may have been eaten by a different person, so a combined line cannot be split fairly.\n   If the receipt only shows a total, divide it by the quantity to get the unit price.\n5. Discounts and vouchers as negative numbers. Example: Discount -50;\n6. Service charge, cleaning fee and corkage go at the very end, each on its own line. Example: Service charge 88;\n7. Do NOT list subtotal, total, amount due, cash received, change, invoice number, tax ID, date, time, table number or party size.\n8. If an item name is unreadable, write ?. Example: ? 120;. Do not guess, and do not skip the line.\n9. Inside the code block put only the list: no heading, no numbering, no bullet points, no table.\n\nIf anything was unclear, write your notes BELOW the code block, never inside it.\n\nExample output:\n```\nKung Pao Chicken 180;\nCabbage 1st 160;\nCabbage 2nd 160;\nTaiwan Beer 120;\nDiscount -50;\nService charge 88;\n```';
     const [aiPrompt, setAiPrompt] = useState(() => {
         try { return localStorage.getItem('bill-splitter-lang') === 'en' ? AI_PROMPT_EN : AI_PROMPT_ZH; }
         catch (e) { return AI_PROMPT_ZH; }
     });
     const [copyPromptSuccess, setCopyPromptSuccess] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
+    // 拍照辨識：預設走拍照，想自己貼的人再展開手動區
+    const [showManualImport, setShowManualImport] = useState(false);
+    const [aiStatus, setAiStatus] = useState('idle');   // idle / loading / error
+    const [aiError, setAiError] = useState('');
+    const photoInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
+    // 手機、平板（觸控為主）才顯示「拍照」：直接叫出手機自己的相機，鏡頭可以自由切換；電腦只顯示選照片
+    const isTouchDevice = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     
     // Install Guide Modal
     const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -119,6 +133,10 @@ const BillSplitter = () => {
         try { localStorage.setItem('bill-splitter-lang', next); } catch (e) { /* 忽略 */ }
         setLang(next);
     };
+
+    useEffect(() => {
+        if (showImportModal) { setShowManualImport(false); setAiStatus('idle'); setAiError(''); }
+    }, [showImportModal]);
 
     // --- 自動存檔 ---
     // 這支 App 的主打功能是「拍帳單 → 切去 ChatGPT 轉文字 → 貼回來」，
@@ -189,7 +207,7 @@ const BillSplitter = () => {
 
     // 開新的一桌
     const resetAll = () => {
-        if (!confirm(t('要清空目前這桌，重新開始嗎？\n\n所有成員、菜色與請客設定都會清除，這個動作無法復原。'))) return;
+        if (!confirm(t('清空這桌、重新開始？\n\n成員、菜色和請客設定都會清除，無法復原。'))) return;
         try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* 忽略 */ }
         setTags([{ id: 'regular', name: '一般', emoji: '😋' }, { id: 'veg', name: '吃素', emoji: '🥦' }]);
         setUsers([{ id: 1, name: '朋友 A', tagId: 'regular' }, { id: 2, name: '朋友 B (素)', tagId: 'veg' }]);
@@ -305,7 +323,7 @@ const BillSplitter = () => {
         if (tags.length <= 1) return;
         const tag = tags.find(t => t.id === tagId);
         const affected = users.filter(u => u.tagId === tagId).length;
-        if (affected > 0 && !confirm(tf('「{0}」目前有 {1} 位成員。\n\n刪除後他們會被改成「{2}」，相關菜色會變成「自訂名單」。\n\n確定要刪除嗎？', tag ? tag.emoji + ' ' + tag.name : t('這個標籤'), affected, tags.find(t2 => t2.id !== tagId).name))) return;
+        if (affected > 0 && !confirm(tf('「{0}」有 {1} 位成員。\n\n刪除後他們會改成「{2}」，相關菜色會變成「自訂名單」。\n\n確定刪除？', tag ? tag.emoji + ' ' + tag.name : t('這個標籤'), affected, tags.find(t2 => t2.id !== tagId).name))) return;
         pushUndo(tf('已刪除標籤「{0}」', tag ? tag.name : ''));
         const fallback = tags.find(t => t.id !== tagId).id;
         setTags(tags.filter(t => t.id !== tagId));
@@ -324,7 +342,7 @@ const BillSplitter = () => {
         const orphaned = items.filter(item => item.sharedBy.length === 1 && item.sharedBy.includes(id));
         if (orphaned.length > 0) {
             const names = orphaned.map(i => `・${i.name} ($${i.price})`).join('\n');
-            const ok = confirm(tf('刪掉這個人之後，下面這些菜會變成沒有人分攤：\n\n{0}\n\n這些金額會被標成「未分配」，不會算進任何人的帳單。\n\n確定要刪除嗎？', names));
+            const ok = confirm(tf('刪掉這個人後，這些菜會沒人分攤：\n\n{0}\n\n金額會標成「未分配」，不算進任何人的帳單。\n\n確定刪除？', names));
             if (!ok) return;
         }
         pushUndo(tf('已刪除成員「{0}」', userName(id)));
@@ -340,7 +358,7 @@ const BillSplitter = () => {
         const groupUserIds = users.filter(u => u.tagId === targetTagId).map(u => u.id);
         if (groupUserIds.length === 0) {
             const tag = tags.find(t => t.id === targetTagId);
-            alert(tf('「{0}」目前沒有成員喔！\n\n請先回上一步，把成員的標籤改成這一個。', tag ? tag.emoji + ' ' + tag.name : t('這個標籤')));
+            alert(tf('「{0}」還沒有成員。\n\n請回上一步，把成員改成這個標籤。', tag ? tag.emoji + ' ' + tag.name : t('這個標籤')));
             return;
         }
         setCurrentSharers(groupUserIds);
@@ -348,8 +366,8 @@ const BillSplitter = () => {
     
     const addItem = () => { if (!newItemName.trim() || currentSharers.length === 0) return;
         const parsedPrice = parseFloat(newItemPrice);
-        if (!isFinite(parsedPrice) || parsedPrice === 0) { alert(t('請輸入有效金額。\n\n不能是 0 或空白。\n如果要輸入折扣，請打負數，例如 -50。')); return; }
-        if (Math.abs(parsedPrice) > 9999999) { alert(t('金額好像太大了，請確認一下。')); return; }
+        if (!isFinite(parsedPrice) || parsedPrice === 0) { alert(t('請輸入有效金額（不能是 0 或空白）。\n\n折扣請打負數，例如 -50。')); return; }
+        if (Math.abs(parsedPrice) > 9999999) { alert(t('金額好像太大，請確認。')); return; }
         let type = 'custom'; let typeLabel = '自訂名單'; const allIds = users.map(u => u.id); if (users.length === currentSharers.length && users.every(u => currentSharers.includes(u.id))) { type = 'all'; typeLabel = '大家都有'; } else { for (const tag of tags) { const tagUserIds = users.filter(u => u.tagId === tag.id).map(u => u.id); if (tagUserIds.length > 0 && tagUserIds.length === currentSharers.length && tagUserIds.every(id => currentSharers.includes(id))) { type = tag.id; typeLabel = `${tag.emoji} ${tag.name}`; break; } } } const newItem = { id: Date.now(), name: newItemName.trim(), price: parsedPrice, type, typeLabel, sharedBy: [...currentSharers] }; setItems([...items, newItem]); setNewItemName(''); setNewItemPrice(''); overrideRef.current = null; };
     // --- 請客 ---
     const userName = (id) => { const u = users.find(x => x.id === id); return u ? u.name : '？'; };
@@ -442,7 +460,7 @@ const BillSplitter = () => {
                 newSharedBy = users.filter(u => u.tagId === targetTagId).map(u => u.id);
                 newTypeLabel = tag ? `${tag.emoji} ${tag.name}` : '自訂';
                 if (newSharedBy.length === 0) {
-                    alert(t('這個標籤目前沒有成員喔！'));
+                    alert(t('這個標籤還沒有成員。'));
                     return item; 
                 }
             }
@@ -454,7 +472,7 @@ const BillSplitter = () => {
         const target = items.find(i => i.id === itemId);
         // 擋下「取消到 0 人分攤」，否則這筆錢會從總額裡消失
         if (target && target.sharedBy.length === 1 && target.sharedBy.includes(userId)) {
-            alert(tf('「{0}」至少要有一個人分攤喔！\n\n如果這道菜要取消，請直接按右上角的垃圾桶刪除。', target.name));
+            alert(tf('「{0}」至少要有一個人分攤。\n\n不要這道菜的話，請按右上角的垃圾桶刪除。', target.name));
             return;
         }
         setItems(items.map(item => { 
@@ -531,45 +549,76 @@ const BillSplitter = () => {
         return { name, price };
     };
 
-    const handleBatchImport = () => {
-        if (!importText.trim()) return;
+    // 把解析好的品項放進清單，直接進逐筆卡片檢視（貼上文字與拍照辨識共用）
+    const commitImported = (parsed, skipped) => {
         const allUserIds = users.map(u => u.id);
-        const newItems = [];
-        const skipped = [];
-
-        // 指令裡要求 AI 把不確定的說明寫在一行 --- 之後，解析到那裡就停
-        const lines = [];
-        for (const line of importText.split('\n')) {
-            if (/^\s*-{3,}\s*$/.test(line)) break;
-            lines.push(line);
-        }
-
-        lines.forEach((line, idx) => {
-            const r = parseImportLine(line);
-            if (!r) return;                                   // 空行，直接忽略
-            if (r.skipped) { skipped.push(r); return; }
-            newItems.push({
-                id: Date.now() + idx + Math.random(),
-                name: r.name,
-                price: r.price,
-                type: 'all',
-                typeLabel: '大家都有',
-                sharedBy: [...allUserIds]
-            });
-        });
-
-        if (newItems.length === 0) {
-            alert(t('無法辨識內容 😢\n\n請確保每一行包含「菜名」與「金額」，例如：\n宮保雞丁 180'));
-            return;
-        }
-
+        const newItems = parsed.map((r, idx) => ({
+            id: Date.now() + idx + Math.random(),
+            name: r.name,
+            price: r.price,
+            type: 'all',
+            typeLabel: '大家都有',
+            sharedBy: [...allUserIds]
+        }));
         setItems(prev => [...prev, ...newItems]);
         setImportText('');
         setShowImportModal(false);
         setSkippedLines(skipped);
         setPendingReviewIds(newItems.map(i => i.id));
         setReviewIndex(0);
-        setIsReviewing(true);     // 直接進入逐筆卡片檢視
+        setIsReviewing(true);
+    };
+
+    const handleBatchImport = () => {
+        if (!importText.trim()) return;
+        const parsed = [];
+        const skipped = [];
+        // 先切成一行一筆：處理 AI 回覆換行不見、程式碼框、分號、條列符號、--- 之後的說明
+        splitImportText(importText).forEach(line => {
+            const r = parseImportLine(line);
+            if (!r) return;
+            if (r.skipped) { skipped.push(r); return; }
+            parsed.push(r);
+        });
+        if (parsed.length === 0) {
+            alert(t('無法辨識 😢\n\n每行要有「菜名」和「金額」，例如：\n宮保雞丁 180'));
+            return;
+        }
+        commitImported(parsed, skipped);
+    };
+
+    // --- 拍照辨識 ---
+    const AI_ERROR_TEXT = {
+        quota: '今天的 AI 額度用完了，請改用下方自己貼明細。',
+        not_configured: '拍照辨識還沒開通，請改用下方自己貼明細。',
+        too_large: '照片太大，請重拍一張。',
+        decode: '這張照片讀不出來，請換一張或重拍。',
+        timeout: 'AI 讀太久了，請再試一次，或改用下方自己貼明細。',
+        empty: '照片裡找不到品項，請拍清楚一點，或改用下方自己貼明細。',
+    };
+    const handlePhotoPicked = async (e) => {
+        const files = Array.from((e.target && e.target.files) || []).slice(0, MAX_PHOTOS);
+        if (e.target) e.target.value = '';           // 讓同一張照片可以再選一次
+        if (files.length === 0) return;
+        setAiStatus('loading');
+        setAiError('');
+        try {
+            const r = await readReceipt(files, lang);
+            const parsed = r.items
+                .filter(it => it && String(it.name || '').trim() && isFinite(Number(it.price)) && Number(it.price) !== 0)
+                .map(it => ({ name: String(it.name).trim(), price: Number(it.price) }));
+            if (parsed.length === 0) throw new Error('empty');
+            // 服務費、清潔費不當菜色匯入（第 4 步另外設定，避免收兩次），列在「沒有匯入」讓使用者看到
+            const skipped = r.fees.map(f => ({ raw: `${f.name} ${f.price}`, reason: t('服務費類，請在結算頁設定') }));
+            if (r.notes && r.notes.trim()) skipped.push({ raw: r.notes.trim(), reason: t('AI 備註') });
+            setAiStatus('idle');
+            commitImported(parsed, skipped);
+        } catch (err) {
+            const code = err && err.message;
+            setAiStatus('error');
+            setAiError(t(AI_ERROR_TEXT[code] || 'AI 暫時讀不到，請再拍一次，或改用下方自己貼明細。'));
+            setShowManualImport(true);                 // 失敗就直接打開手動貼上
+        }
     };
 
     // --- 修復後的貼上功能 ---
@@ -914,7 +963,7 @@ const BillSplitter = () => {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm m-4 overflow-hidden flex flex-col max-h-[80vh]">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><Settings size={20}/> {t('管理群組標籤')}</h3><button onClick={() => setShowTagManager(false)} aria-label={t('關閉')} title={t('關閉')} className="p-2 text-slate-400 hover:text-slate-600 bg-white rounded-full border border-slate-200"><X size={20}/></button></div>
                 <div className="p-4 overflow-y-auto flex-1">
-                    <div className="space-y-3 mb-6">{tags.map(tag => (<div key={tag.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-2xl">{tag.emoji}</div><span className="font-bold text-slate-700">{tag.name}</span></div>{tags.length > 1 && <button onClick={() => removeTag(tag.id)} aria-label={`刪除標籤 ${tag.name}`} title={t('刪除標籤')} className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={18}/></button>}</div>))}</div>
+                    <div className="space-y-3 mb-6">{tags.map(tag => (<div key={tag.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-2xl">{tag.emoji}</div><span className="font-bold text-slate-700">{tag.name}</span></div>{tags.length > 1 && <button onClick={() => removeTag(tag.id)} aria-label={`${t('刪除標籤')} ${tag.name}`} title={t('刪除標籤')} className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={18}/></button>}</div>))}</div>
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><h4 className="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{t('新增自訂標籤')}</h4><div className="flex gap-2 mb-3"><div className="relative"><select value={newTagEmoji} onChange={e => setNewTagEmoji(e.target.value)} aria-label={t('選擇標籤圖示')} className="h-full px-2 bg-white border border-slate-300 rounded-lg text-xl appearance-none outline-none focus:border-green-500">{['🍺','🍷','🥩','🥗','👶','🍰','🚗','🎤','🎲','🐶'].map(e => <option key={e} value={e}>{e}</option>)}</select><span className="absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none text-xs text-slate-400">▼</span></div><input type="text" placeholder={t('群組名稱 (如: 喝酒)')} className="flex-1 px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500" value={newTagName} onChange={e => setNewTagName(e.target.value)}/></div><button onClick={addTag} disabled={!newTagName} className="w-full py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 disabled:bg-slate-300 disabled:shadow-none shadow-md transition-all"><Plus size={18} className="inline mr-1"/> {t('新增標籤')}</button></div>
                 </div>
             </div>
@@ -924,77 +973,121 @@ const BillSplitter = () => {
     // 文字匯入 Modal
     const renderImportModal = () => (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm m-4 overflow-hidden flex flex-col h-[75vh]">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm m-4 overflow-hidden flex flex-col max-h-[85vh]">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><PasteIcon size={20}/> {t('貼上文字明細')}</h3>
+                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><PasteIcon size={20}/> {t('匯入整張帳單')}</h3>
                     <button onClick={() => setShowImportModal(false)} aria-label={t('關閉')} title={t('關閉')} className="p-2 text-slate-400 hover:text-slate-600 bg-white rounded-full border border-slate-200"><X size={20}/></button>
                 </div>
                 <div className="p-4 flex-1 flex flex-col gap-4 overflow-y-auto">
-                    
-                    <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-sm text-blue-800 space-y-2">
-                        <div className="flex gap-2 items-start">
-                            <Lightbulb size={16} className="mt-0.5 flex-shrink-0 text-blue-600"/>
-                            <div>
-                                <p className="font-bold">{t('懶得打字？拍帳單給 AI 就好')}</p>
-                                <p className="text-xs mt-1 leading-relaxed">
-                                    <strong>{t('① 拍下帳單')}</strong>{t('傳給 ChatGPT 或 Gemini →')}
-                                    <strong> {t('② 複製下面的指令')}</strong>{t('一起貼過去 →')}
-                                    <strong> {t('③ 把 AI 回覆的明細貼回這裡')}</strong>
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleCopyPrompt}
-                            className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all ${copyPromptSuccess ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
-                        >
-                            {copyPromptSuccess ? t('✓ 已複製，貼給 AI 就好') : t('📋 複製給 AI 的指令')}
-                        </button>
-                        <button
-                            onClick={() => setShowPrompt(v => !v)}
-                            className="w-full text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
-                        >
-                            {showPrompt ? t('收起指令內容') : t('看看指令寫了什麼（可自行修改）')}
-                            <ChevronDown size={12} className={showPrompt ? 'rotate-180 transition-transform' : 'transition-transform'} />
-                        </button>
-                        {showPrompt && (
-                            <textarea
-                                value={aiPrompt}
-                                onChange={(e) => setAiPrompt(e.target.value)}
-                                aria-label={t('給 AI 的指令')}
-                                className="w-full bg-white p-2 rounded-lg border border-blue-200 text-[11px] leading-relaxed text-slate-600 outline-none resize-y font-mono"
-                                rows="12"
-                            ></textarea>
-                        )}
-                    </div>
 
-                    <div className="flex-1 flex flex-col">
-                        <div className="flex justify-between items-end mb-1">
-                            <label className="text-sm font-bold text-slate-700">{t('在此貼上明細')}</label>
-                            <button 
-                                onClick={handlePasteText} 
-                                className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded hover:bg-slate-200 flex items-center gap-1 transition-colors"
-                            >
-                                <PasteIcon size={12}/> {t('貼上')}
-                            </button>
+                    {/* 預設：拍照給 AI 讀 */}
+                    {/* capture：直接開手機的相機（系統相機，不是網頁自己做的相機畫面，所以鏡頭能切換）；另一個從相簿一次選多張 */}
+                    <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoPicked} />
+                    <input ref={photoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoPicked} />
+                    {aiStatus === 'loading' ? (
+                        <div className="flex flex-col items-center justify-center text-center py-8 gap-3" role="status" aria-live="polite">
+                            <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
+                            <p className="font-bold text-slate-700">{t('AI 正在讀帳單…')}</p>
+                            <p className="text-xs text-slate-400">{t('通常 10 到 30 秒')}</p>
                         </div>
-                        <textarea 
-                            ref={textareaRef}
-                            value={importText}
-                            onChange={(e) => setImportText(e.target.value)}
-                            placeholder={t('範例：&#10;宮保雞丁 180&#10;炒高麗菜 100&#10;台灣啤酒 60')}
-                            className="flex-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-400 bg-slate-50 font-mono text-sm resize-none min-h-[120px]"
-                        ></textarea>
+                    ) : (
+                        <div className="space-y-2">
+                            <button onClick={() => { const el = isTouchDevice ? cameraInputRef.current : photoInputRef.current; if (el) el.click(); }}
+                                className="w-full flex flex-col items-center justify-center gap-1.5 py-6 rounded-xl border-2 border-dashed border-green-400 bg-green-50 hover:bg-green-100 active:scale-[0.99] transition-all">
+                                <span className="text-3xl">📸</span>
+                                <span className="font-bold text-green-800">{isTouchDevice ? t('拍帳單') : tf('選帳單照片（最多 {0} 張）', MAX_PHOTOS)}</span>
+                                <span className="text-xs text-green-700">{t('AI 會讀出每道菜和金額')}</span>
+                            </button>
+                            {isTouchDevice && (
+                                <button onClick={() => photoInputRef.current && photoInputRef.current.click()}
+                                    className="w-full py-2.5 rounded-xl border border-green-200 bg-white text-sm font-bold text-green-700 hover:bg-green-50 transition-colors">
+                                    🖼️ {tf('從相簿選（最多 {0} 張）', MAX_PHOTOS)}
+                                </button>
+                            )}
+                            <p className="text-[11px] text-slate-400 leading-relaxed text-center">{t('照片會送到 Google Gemini 辨識，本站不保存；Google 可能用來改善服務。')}</p>
+                        </div>
+                    )}
+
+                    {aiStatus === 'error' && aiError && (
+                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-800" role="alert">{aiError}</div>
+                    )}
+
+                    {/* 想自己貼的人：展開原本的手動貼上 */}
+                    {aiStatus !== 'loading' && (
+                        <button onClick={() => setShowManualImport(v => !v)}
+                            className="text-xs font-bold text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1">
+                            {showManualImport ? t('收起手動貼上') : t('想自己貼明細？點這裡')}
+                            <ChevronDown size={12} className={showManualImport ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                        </button>
+                    )}
+
+                    {showManualImport && aiStatus !== 'loading' && (
+                        <>
+                            <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-sm text-blue-800 space-y-2">
+                                <div className="flex gap-2 items-start">
+                                    <Lightbulb size={16} className="mt-0.5 flex-shrink-0 text-blue-600"/>
+                                    <p className="text-xs leading-relaxed">
+                                        <strong>{t('① 拍下帳單')}</strong>{t('傳給 ChatGPT 或 Gemini →')}
+                                        <strong> {t('② 複製下面的指令')}</strong>{t('一起貼過去 →')}
+                                        <strong> {t('③ 按 AI 回覆裡程式碼框的「複製」，貼回這裡')}</strong>
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleCopyPrompt}
+                                    className={`w-full py-2 rounded-lg text-sm font-bold transition-all ${copyPromptSuccess ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
+                                >
+                                    {copyPromptSuccess ? t('✓ 已複製，貼給 AI 就好') : t('📋 複製給 AI 的指令')}
+                                </button>
+                                <button
+                                    onClick={() => setShowPrompt(v => !v)}
+                                    className="w-full text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center justify-center gap-1"
+                                >
+                                    {showPrompt ? t('收起指令內容') : t('看看指令寫了什麼（可自行修改）')}
+                                    <ChevronDown size={12} className={showPrompt ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                                </button>
+                                {showPrompt && (
+                                    <textarea
+                                        value={aiPrompt}
+                                        onChange={(e) => setAiPrompt(e.target.value)}
+                                        aria-label={t('給 AI 的指令')}
+                                        className="w-full bg-white p-2 rounded-lg border border-blue-200 text-[11px] leading-relaxed text-slate-600 outline-none resize-y font-mono"
+                                        rows="12"
+                                    ></textarea>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col">
+                                <div className="flex justify-between items-end mb-1">
+                                    <label className="text-sm font-bold text-slate-700">{t('在此貼上明細')}</label>
+                                    <button
+                                        onClick={handlePasteText}
+                                        className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded hover:bg-slate-200 flex items-center gap-1 transition-colors"
+                                    >
+                                        <PasteIcon size={12}/> {t('貼上')}
+                                    </button>
+                                </div>
+                                <textarea
+                                    ref={textareaRef}
+                                    value={importText}
+                                    onChange={(e) => setImportText(e.target.value)}
+                                    placeholder={t('範例：\n宮保雞丁 180\n炒高麗菜 100\n台灣啤酒 60')}
+                                    className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-400 bg-slate-50 font-mono text-sm resize-none min-h-[140px]"
+                                ></textarea>
+                            </div>
+                        </>
+                    )}
+                </div>
+                {showManualImport && aiStatus !== 'loading' && (
+                    <div className="p-4 border-t border-slate-100">
+                        <button
+                            onClick={handleBatchImport}
+                            disabled={!importText.trim()}
+                            className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 disabled:bg-slate-300 disabled:shadow-none transition-all"
+                        >
+                            {t('開始匯入')}
+                        </button>
                     </div>
-                </div>
-                <div className="p-4 border-t border-slate-100">
-                    <button 
-                        onClick={handleBatchImport}
-                        disabled={!importText.trim()}
-                        className="w-full py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:bg-green-700 disabled:bg-slate-300 disabled:shadow-none transition-all"
-                    >
-                        {t('開始匯入')}
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );
@@ -1035,7 +1128,7 @@ const BillSplitter = () => {
                     </div>
                 </div>
                 <div className="p-4 bg-green-50 text-center">
-                    <p className="text-xs text-green-700 font-medium">{t('✨ 這樣就能像 APP 一樣全螢幕使用囉！')}</p>
+                    <p className="text-xs text-green-700 font-medium">{t('✨ 就能像 App 一樣全螢幕使用！')}</p>
                 </div>
             </div>
         </div>
@@ -1078,7 +1171,7 @@ const BillSplitter = () => {
                         <button onClick={() => setPortionItemId(null)} aria-label={t('關閉')} title={t('關閉')} className="p-2 text-slate-400 hover:text-slate-600 bg-white rounded-full border border-slate-200 flex-shrink-0"><X size={18}/></button>
                     </div>
                     <div className="p-4 overflow-y-auto flex-1 space-y-2">
-                        <p className="text-xs text-slate-400 mb-2">{t('有人吃兩份就把份數加上去，不用把這道菜輸入兩次。')}</p>
+                        <p className="text-xs text-slate-400 mb-2">{t('有人吃兩份就加份數，不用重複輸入。')}</p>
                         {sharers.map(uid => {
                             const u = users.find(x => x.id === uid);
                             const tag = tags.find(t => t.id === u.tagId);
@@ -1133,7 +1226,7 @@ const BillSplitter = () => {
                                 <div className="flex-1 min-w-0">
                                     <div className="font-bold text-slate-700 truncate">{u.name}</div>
                                     <div className="text-[11px] text-slate-400">{tf('應付 ${0}', d.total)}</div>
-                                    {d.isTreated && <div className="text-[11px] text-amber-700 truncate">🎁 {d.treatedByIds.map(userName).join('、')} 請客</div>}
+                                    {d.isTreated && <div className="text-[11px] text-amber-700 truncate">{tf('🎁 {0} 請客', d.treatedByIds.map(userName).join(isEn ? ', ' : '、'))}</div>}
                                 </div>
                                 {d.isTreated ? (
                                     <div className="flex gap-1 flex-shrink-0">
@@ -1218,8 +1311,8 @@ const BillSplitter = () => {
                 <h2 className="text-xl font-bold text-slate-800">{t('怎麼輸入菜色？')}</h2>
                 <p className="text-sm text-slate-400 mt-1">
                     {items.length > 0
-                        ? `已經輸入 ${items.length} 道，切換不會清掉它們`
-                        : t('兩種都可以隨時切換，選一個開始就好')}
+                        ? tf('已輸入 {0} 道，切換不會清掉', items.length)
+                        : t('隨時可以切換，選一個開始')}
                 </p>
             </div>
 
@@ -1229,7 +1322,7 @@ const BillSplitter = () => {
                     <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0 text-slate-600"><Plus size={26} /></div>
                     <div className="flex-1">
                         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">{t('手動輸入')} <ChevronRight size={18} className="text-slate-300" /></h3>
-                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{t('一道一道加，邊加邊選誰有吃。菜色不多、或是想邊點邊記的時候最順。')}</p>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{t('一道道加，邊加邊選誰有吃。適合菜不多或邊點邊記。')}</p>
                     </div>
                 </div>
             </button>
@@ -1241,8 +1334,8 @@ const BillSplitter = () => {
                     <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 text-green-600"><PasteIcon size={24} /></div>
                     <div className="flex-1">
                         <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">{t('大量匯入')} <ChevronRight size={18} className="text-green-400" /></h3>
-                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{t('一次貼上整張明細。匯入後會')}<strong className="text-green-700">{t('一道一道跳卡片')}</strong>{t('讓你確認誰有吃，不用自己回頭一個一個點。')}</p>
-                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1"><Lightbulb size={12} /> {t('可以拍帳單請 ChatGPT 轉成文字再貼過來')}</p>
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">{t('拍照或貼上整張帳單，匯入後會')}<strong className="text-green-700">{t('一道道跳出卡片')}</strong>{t('讓你確認誰有吃。')}</p>
+                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1"><Lightbulb size={12} /> {t('拍照就由 AI 讀出每道菜和金額')}</p>
                     </div>
                 </div>
             </button>
@@ -1299,7 +1392,7 @@ const BillSplitter = () => {
                                 className="w-16 bg-transparent text-right font-bold text-slate-800 outline-none py-2" />
                         </div>
                     </div>
-                    <p className="text-[11px] text-slate-400 -mt-2">{t('品名或金額認錯了？可以直接在上面改')}</p>
+                    <p className="text-[11px] text-slate-400 -mt-2">{t('品名或金額有錯？直接在上面改')}</p>
 
                     {/* 標籤快捷 */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -1354,7 +1447,7 @@ const BillSplitter = () => {
                         </button>
                     </div>
                     <button onClick={reviewSkipAll} className="w-full mt-2 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600">
-                        {t('略過檢視，直接看全部清單')}
+                        {t('略過，直接看全部清單')}
                     </button>
                 </div>
             </div>
@@ -1385,7 +1478,7 @@ const BillSplitter = () => {
                 <div className="space-y-4 animate-fade-in">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-2">
                         <p className="text-sm text-green-800 leading-relaxed">
-                            {t('歡迎！請設定成員並標記標籤。')}<br/>{t('可以自訂')} <strong>{t('「🥦 素食」')}</strong>{isEn ? ', ' : '、'}<strong>{t('「🍺 只喝酒」')}</strong>{isEn ? ' ' : ''}{t('等標籤，等等只要一鍵就能只分帳給這個標籤的人！')}
+                            {t('歡迎！先設定成員和標籤。')}<br/>{t('可以自訂')} <strong>{t('「🥦 素食」')}</strong>{isEn ? ', ' : '、'}<strong>{t('「🍺 只喝酒」')}</strong>{isEn ? ' ' : ''}{t('等標籤，之後一鍵就能分給同標籤的人。')}
                         </p>
                     </div>
                     <div className="flex justify-end"><button onClick={() => setShowTagManager(true)} className="text-xs font-bold text-slate-500 flex items-center gap-1 bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors"><Settings size={14}/> {tf('管理標籤 ({0})', tags.length)}</button></div>
@@ -1430,7 +1523,7 @@ const BillSplitter = () => {
                                     <CalculatorIcon size={20} />
                                 </button>
                                 {!isHeaderCompact && (
-                                    <button onClick={() => setShowImportModal(true)} aria-label={t('貼上文字明細')} title={t('貼上文字明細，一次匯入整張帳單')}
+                                    <button onClick={() => setShowImportModal(true)} aria-label={t('匯入整張帳單')} title={t('拍照或貼上，一次匯入整張帳單')}
                                         className="flex-shrink-0 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 active:scale-95 transition-colors border border-slate-200 px-2.5">
                                         <PasteIcon size={20} />
                                     </button>
@@ -1479,8 +1572,8 @@ const BillSplitter = () => {
                             不依賴 display 類別的優先順序。 */}
                         <div className={`border-t border-slate-100 ${isHeaderCompact ? '-mx-2 -mb-2 mt-1.5' : '-mx-3 -mb-3 mt-2'}`}>
                             <button onClick={toggleCompact}
-                                aria-label={isHeaderCompact ? '展開輸入區' : '收起輸入區'}
-                                title={isHeaderCompact ? '展開輸入區，選誰有吃' : '收起輸入區，方便看下面的清單'}
+                                aria-label={isHeaderCompact ? t('展開輸入區') : t('收起輸入區')}
+                                title={isHeaderCompact ? t('展開輸入區，選誰有吃') : t('收起輸入區，方便看下面的清單')}
                                 className={`w-full flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors rounded-b-2xl ${isHeaderCompact ? 'py-1.5' : 'py-2'}`}>
                                 {isHeaderCompact ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
                             </button>
@@ -1502,9 +1595,9 @@ const BillSplitter = () => {
                             <div className="bg-red-50 border-2 border-red-200 p-3 rounded-xl flex gap-2 items-start">
                                 <span className="text-lg leading-none">⚠️</span>
                                 <div className="text-xs text-red-700 leading-relaxed">
-                                    <strong>有 ${Math.abs(calculation.unassigned)} 沒有分配給任何人</strong>
+                                    <strong>{tf('有 ${0} 沒有分配給任何人', Math.abs(calculation.unassigned))}</strong>
                                     <div className="mt-1 text-red-600">
-                                        {calculation.unassignedItems.join('、')} 目前沒有人分攤，這些金額<strong>{t('不會')}</strong>{t('算進任何人的帳單。請幫這些項目選人，或直接刪除。')}
+                                        {tf('{0} 沒有人分攤，這些金額', calculation.unassignedItems.join(lang === 'en' ? ', ' : '、'))}<strong>{t('不會')}</strong>{t('算進任何人的帳單。請替它們選人，或直接刪除。')}
                                     </div>
                                 </div>
                             </div>
@@ -1515,7 +1608,7 @@ const BillSplitter = () => {
                         <div key={item.id} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
                             <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1 mr-2"><h3 className="font-bold text-slate-700 break-all leading-tight">{item.name}</h3></div>
-                                <div className="flex items-center gap-3">{item.sharedBy.length === 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">{t('未分配')}</span>}<span className={`font-bold ${item.price < 0 ? 'text-green-600' : 'text-slate-800'}`}>{item.price < 0 ? `-$${Math.abs(item.price)}` : `$${item.price}`}</span><button onClick={() => setPortionItemId(item.id)} aria-label={`調整 ${item.name} 的份數`} title={t('調整份數')} className={`text-xs font-bold px-1.5 py-0.5 rounded border transition-colors ${hasMultiUnits(item) ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-slate-300 border-slate-200 hover:text-slate-500 hover:border-slate-300'}`}>⚖️{hasMultiUnits(item) ? ` ${itemTotalUnits(item)}份` : ''}</button><button onClick={() => removeItem(item.id)} aria-label={`刪除 ${item.name}`} title={t('刪除這道菜')} className="text-slate-300 hover:text-red-400"><Trash2 size={16} /></button></div>
+                                <div className="flex items-center gap-3">{item.sharedBy.length === 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">{t('未分配')}</span>}<span className={`font-bold ${item.price < 0 ? 'text-green-600' : 'text-slate-800'}`}>{item.price < 0 ? `-$${Math.abs(item.price)}` : `$${item.price}`}</span><button onClick={() => setPortionItemId(item.id)} aria-label={tf('⚖️ {0} 的份數', item.name)} title={t('調整份數')} className={`text-xs font-bold px-1.5 py-0.5 rounded border transition-colors ${hasMultiUnits(item) ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-slate-300 border-slate-200 hover:text-slate-500 hover:border-slate-300'}`}>⚖️{hasMultiUnits(item) ? ` ${tf('{0}份', itemTotalUnits(item))}` : ''}</button><button onClick={() => removeItem(item.id)} aria-label={`${t('刪除這道菜')}${isEn ? ': ' : '：'}${item.name}`} title={t('刪除這道菜')} className="text-slate-300 hover:text-red-400"><Trash2 size={16} /></button></div>
                             </div>
                             
                             {/* 簡化後的快速套用列 (按鈕顏色即代表狀態) */}
@@ -1635,9 +1728,9 @@ const BillSplitter = () => {
                             <div className="bg-red-50 border-2 border-red-200 p-3 rounded-xl flex gap-2 items-start">
                                 <span className="text-lg leading-none">⚠️</span>
                                 <div className="text-xs text-red-700 leading-relaxed">
-                                    <strong>有 ${Math.abs(calculation.unassigned)} 沒有分配給任何人</strong>
+                                    <strong>{tf('有 ${0} 沒有分配給任何人', Math.abs(calculation.unassigned))}</strong>
                                     <div className="mt-1 text-red-600">
-                                        {calculation.unassignedItems.join('、')} 目前沒有人分攤，這些金額<strong>{t('不會')}</strong>{t('算進任何人的帳單。請幫這些項目選人，或直接刪除。')}
+                                        {tf('{0} 沒有人分攤，這些金額', calculation.unassignedItems.join(lang === 'en' ? ', ' : '、'))}<strong>{t('不會')}</strong>{t('算進任何人的帳單。請替它們選人，或直接刪除。')}
                                     </div>
                                 </div>
                             </div>
@@ -1657,7 +1750,7 @@ const BillSplitter = () => {
                                         <div className="min-w-0">
                                             <h3 className="font-bold text-slate-800 truncate">{u.name}</h3>
                                             {data.isTreated
-                                                ? <p className="text-xs text-amber-700 font-medium truncate">🎁 {data.treatedByIds.map(userName).join('、')} 請客</p>
+                                                ? <p className="text-xs text-amber-700 font-medium truncate">{tf('🎁 {0} 請客', data.treatedByIds.map(userName).join(isEn ? ', ' : '、'))}</p>
                                                 : <p className="text-xs text-slate-400">{isExpanded ? t('點擊收合') : t('點擊查看算式')}</p>}
                                         </div>
                                     </div>
@@ -1685,7 +1778,7 @@ const BillSplitter = () => {
                                                 {data.extra !== 0 && <div className="flex justify-between text-xs text-slate-500"><span>{t('固定加收')}</span><span>${data.extra}</span></div>}
                                                 <div className="flex justify-between font-bold text-slate-800 text-base pt-1 border-t border-slate-300"><span>{t('應付總額')}</span><span>${data.total}</span></div>
                                                 {data.isTreated && (
-                                                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 font-medium">🎁 {data.treatedByIds.map(userName).join('、')} 請客</div>
+                                                    <div className="mt-2 pt-2 border-t border-amber-200 text-xs text-amber-700 font-medium">{tf('🎁 {0} 請客', data.treatedByIds.map(userName).join(isEn ? ', ' : '、'))}</div>
                                                 )}
                                             </div>
                                         </div>
@@ -1742,7 +1835,7 @@ const BillSplitter = () => {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
                         <div className="p-4 border-b border-slate-100 bg-amber-50">
                             <h3 className="font-bold text-slate-800">{t('自動複製失敗 😢')}</h3>
-                            <p className="text-xs text-slate-500 mt-1">{t('請長按下面的文字全選後手動複製。')}</p>
+                            <p className="text-xs text-slate-500 mt-1">{t('請長按下方文字，全選後複製。')}</p>
                         </div>
                         <textarea readOnly value={copyFallbackText} onFocus={e => e.target.select()}
                             className="flex-1 m-4 p-3 border border-slate-200 rounded-xl bg-slate-50 font-mono text-xs resize-none min-h-[200px] outline-none" />

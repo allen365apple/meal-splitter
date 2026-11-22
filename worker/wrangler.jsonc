@@ -1,0 +1,21 @@
+// 最後更新：2026-11-23 08:40（台北時間）
+// 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
+// 修改摘要：單一模型改成「由強到弱」的模型清單，前面的忙線或沒回應就換下一個
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "meal-splitter-ai",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "vars": {
+    // 依序嘗試的模型（逗號分隔，由強到弱，都是免費額度有的）。前面的忙線、額度用完或沒回應就換下一個。
+    // 依據：AI Studio「Rate Limit」頁 meal-splitter-free 專案的免費額度（2026-11-23），每個都實測過 ID 可用
+    // gemini-2.5-flash／2.5-flash-lite 有免費額度，但 Google 回「新用戶已不能使用」(404)，所以不放
+    "GEMINI_MODELS": "gemini-4-hydrogen,gemini-3.8-flash,gemini-3.6-flash,gemini-3-flash-preview,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemma-4-31b-it",
+    // 保底模型：快又穩（約 6 秒、每天 500 次）。它之前的強模型共用 30 秒，輪到它時保證還有 30 秒
+    "GEMINI_SAFE_MODEL": "gemini-3.5-flash-lite",
+    // 只接受這些網站送來的請求（逗號分隔）
+    "ALLOWED_ORIGINS": "https://allen365apple.github.io,http://localhost:8777,http://127.0.0.1:8777"
+  }
+}

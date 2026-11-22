@@ -1,0 +1,14 @@
+{
+  "name": "meal-splitter-ai",
+  "private": true,
+  "type": "module",
+  "description": "聚餐友善分帳機的拍照辨識中繼站：收網頁傳來的帳單照片，轉給 Google Gemini 讀出品項與金額。",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.166.0"
+  }
+}

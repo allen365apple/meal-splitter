@@ -1,0 +1,9 @@
+# 最後更新：2026-11-23 05:28（台北時間）
+# 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
+# 修改摘要：新增，Worker 的本機金鑰檔與建置產出不進版控
+node_modules/
+.dev.vars*
+.env*
+dist/
+.cloudflare/
+.wrangler/
