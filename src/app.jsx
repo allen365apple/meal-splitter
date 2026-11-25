@@ -1,6 +1,6 @@
-// 最後更新：2026-11-23 10:30（台北時間）
+// 最後更新：2026-11-26 01:15（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：匯入視窗改成「拍照」「上傳照片」兩顆並排按鈕讓人自己選（電腦只顯示上傳）
+// 修改摘要：新增「Google AI 太多人用」的錯誤說明（中繼站全部模型忙線時顯示）
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -594,6 +594,7 @@ const BillSplitter = () => {
         too_large: '照片太大，請重拍一張。',
         decode: '這張照片讀不出來，請換一張或重拍。',
         timeout: 'AI 讀太久了，請再試一次，或改用下方自己貼明細。',
+        busy: 'Google 的 AI 現在太多人用，請過一兩分鐘再試，或改用下方自己貼明細。',
         empty: '照片裡找不到品項，請拍清楚一點，或改用下方自己貼明細。',
     };
     const handlePhotoPicked = async (e) => {

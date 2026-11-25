@@ -1,6 +1,6 @@
-// 最後更新：2026-11-23 08:40（台北時間）
+// 最後更新：2026-11-26 01:15（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：依序嘗試多個免費模型（由強到弱），忙線、額度用完、逾時或回傳壞掉就換下一個；保底模型保證有時間跑
+// 修改摘要：全部模型都塞車時，剩下的時間對輕量模型輪流重試；全部忙線回 busy 讓網頁說清楚是 Google 太多人用
 
 // 這支 Worker 只做一件事：把帳單照片交給 Gemini，回傳 { items, fees, notes }。
 // 防濫用：只接受白名單網站、限制照片數量與大小、指令寫死在這裡（不是任何人都能拿來問 Gemini 的通用代理）。
@@ -23,8 +23,9 @@ const MAX_BODY = 10_000_000;
 const STRONG_EACH_MS = 18_000;
 const STRONG_PHASE_MS = 30_000;
 const SAFE_EACH_MS = 25_000;
-const TOTAL_BUDGET_MS = 60_000; // 網頁端等 80 秒
+const TOTAL_BUDGET_MS = 65_000; // 網頁端等 80 秒
 const MIN_TRY_MS = 5_000;
+const RETRY_PAUSE_MS = 2_000; // 第一輪全失敗後，輕量模型每輪重試之間先等一下
 
 const PROMPT_ZH = `你是讀餐廳帳單的助手。請讀這張（或這幾張）帳單照片，回傳 JSON。
 
@@ -157,26 +158,18 @@ export default {
     const started = Date.now();
     const tried: string[] = [];
     let sawQuota = false;
+    let sawBusy = false;
+    const key = env.GEMINI_API_KEY;
 
-    const safeIndex = Math.max(0, models.indexOf(env.GEMINI_SAFE_MODEL));
-    for (const [i, model] of models.entries()) {
-      const elapsed = Date.now() - started;
-      const timeout =
-        i < safeIndex
-          ? Math.min(STRONG_EACH_MS, STRONG_PHASE_MS - elapsed)
-          : Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - elapsed);
-      if (timeout < MIN_TRY_MS) {
-        tried.push(`${model}:skip`);
-        continue;
-      }
-
+    // 試一個模型：成功回 Response；失敗回 null，並記下原因
+    const attempt = async (model: string, timeout: number): Promise<Response | null> => {
       // Gemma 不支援指定 JSON 格式，只靠指令要求回 JSON
       const generationConfig = model.startsWith("gemma")
         ? {}
         : { responseMimeType: "application/json", responseJsonSchema: RESPONSE_SCHEMA };
       const url =
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
-        `?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+        `?key=${encodeURIComponent(key)}`;
 
       let res: Response;
       try {
@@ -187,16 +180,18 @@ export default {
           signal: AbortSignal.timeout(timeout),
         });
       } catch (e) {
+        sawBusy = true;
         tried.push(`${model}:timeout`);
-        continue;
+        return null;
       }
 
       if (!res.ok) {
         if (res.status === 429) sawQuota = true;
+        if (res.status === 503 || res.status === 500) sawBusy = true;
         tried.push(`${model}:${res.status}`);
         // 只記在 Cloudflare 的紀錄裡，不把 Google 的錯誤訊息原樣丟回網頁
         console.log("gemini error", model, res.status, (await res.text()).slice(0, 300));
-        continue;
+        return null;
       }
 
       try {
@@ -220,11 +215,43 @@ export default {
       } catch (e) {
         tried.push(`${model}:parse`);
         console.log("parse error", model, String(e));
+        return null;
+      }
+    };
+
+    // 第一輪：由強到弱各試一次
+    const safeIndex = Math.max(0, models.indexOf(env.GEMINI_SAFE_MODEL));
+    for (const [i, model] of models.entries()) {
+      const elapsed = Date.now() - started;
+      const timeout =
+        i < safeIndex
+          ? Math.min(STRONG_EACH_MS, STRONG_PHASE_MS - elapsed)
+          : Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - elapsed);
+      if (timeout < MIN_TRY_MS) {
+        tried.push(`${model}:skip`);
         continue;
       }
+      const ok = await attempt(model, timeout);
+      if (ok) return ok;
+    }
+
+    // 之後：Google 塞車通常一下就過，剩下的時間對輕量模型（額度多）輪流重試
+    const lightModels = models.slice(safeIndex);
+    while (sawBusy && lightModels.length) {
+      let triedThisRound = false;
+      for (const model of lightModels) {
+        await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS));
+        const timeout = Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - (Date.now() - started));
+        if (timeout < MIN_TRY_MS) break;
+        triedThisRound = true;
+        const ok = await attempt(model, timeout);
+        if (ok) return ok;
+      }
+      if (!triedThisRound) break;
     }
 
     console.log("all models failed", tried.join(" "));
+    if (sawBusy) return json({ error: "busy" }, 503, okOrigin);
     return sawQuota
       ? json({ error: "quota" }, 429, okOrigin)
       : json({ error: "upstream" }, 502, okOrigin);

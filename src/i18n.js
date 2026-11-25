@@ -1,6 +1,6 @@
-// 最後更新：2026-11-23 10:30（台北時間）
+// 最後更新：2026-11-26 01:15（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：匯入視窗改成「拍照」「上傳照片」兩顆按鈕，更新對應英文
+// 修改摘要：新增「Google AI 太多人用」錯誤訊息的英文
 
 // 介面語言。以中文原文當 key，這樣原始碼讀起來還是中文、好維護。
 // 找不到對應翻譯時就原樣顯示，不會變成空白或 key 名稱。
@@ -210,6 +210,7 @@ export const EN = {
   '照片太大，請重拍一張。': 'That photo is too large. Please take another one.',
   '這張照片讀不出來，請換一張或重拍。': "This photo can't be read. Choose another one or retake it.",
   'AI 讀太久了，請再試一次，或改用下方自己貼明細。': 'The AI took too long. Try again, or paste the bill yourself below.',
+  'Google 的 AI 現在太多人用，請過一兩分鐘再試，或改用下方自己貼明細。': "Google's AI is busy right now. Try again in a minute or two, or paste the bill yourself below.",
   '照片裡找不到品項，請拍清楚一點，或改用下方自己貼明細。': 'The AI found no items in the photo. Take a clearer photo, or paste the bill yourself below.',
   'AI 暫時讀不到，請再拍一次，或改用下方自己貼明細。': "The AI couldn't read this photo right now. Take it again, or paste the bill yourself below.",
 
