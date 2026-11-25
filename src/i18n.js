@@ -1,6 +1,6 @@
-// 最後更新：2026-11-26 01:45（台北時間）
+// 最後更新：2026-11-26 01:55（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：隱私說明改成「Google 不會拿照片來訓練 AI」的中英文
+// 修改摘要：新增等待畫面「記得謝謝柏文」的英文
 
 // 介面語言。以中文原文當 key，這樣原始碼讀起來還是中文、好維護。
 // 找不到對應翻譯時就原樣顯示，不會變成空白或 key 名稱。
@@ -194,6 +194,7 @@ export const EN = {
   '匯入整張帳單': 'Import the whole bill',
   'AI 正在讀帳單…': 'AI is reading the bill…',
   '通常 10 到 30 秒': 'Usually 10–30 seconds',
+  '這是柏文自掏腰包的付費 AI，記得謝謝柏文 🙏': "This runs on 柏文's paid AI, out of their own pocket — remember to say thanks 🙏",
   'AI 會讀出每道菜和金額': 'AI reads every dish and price',
   '讓 AI 讀帳單': 'Let AI read the receipt',
   '拍照': 'Take photo',

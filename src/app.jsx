@@ -1,6 +1,6 @@
-// 最後更新：2026-11-26 01:45（台北時間）
+// 最後更新：2026-11-26 01:55（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：Gemini 金鑰改成付費專案，隱私說明改成「Google 不會拿照片來訓練 AI」
+// 修改摘要：AI 讀帳單等待畫面加一行：這是柏文自掏腰包的付費 AI，記得謝謝柏文
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -990,6 +990,7 @@ const BillSplitter = () => {
                             <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
                             <p className="font-bold text-slate-700">{t('AI 正在讀帳單…')}</p>
                             <p className="text-xs text-slate-400">{t('通常 10 到 30 秒')}</p>
+                            <p className="text-xs text-slate-400">{t('這是柏文自掏腰包的付費 AI，記得謝謝柏文 🙏')}</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
