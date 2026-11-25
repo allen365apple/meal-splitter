@@ -1,6 +1,6 @@
-// 最後更新：2026-11-26 01:15（台北時間）
+// 最後更新：2026-11-26 01:35（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：全部模型都塞車時，剩下的時間對輕量模型輪流重試；全部忙線回 busy 讓網頁說清楚是 Google 太多人用
+// 修改摘要：可設第二把付費金鑰當最後備援：免費的全部失敗才用它試輕量模型（沒設就跟以前一樣）
 
 // 這支 Worker 只做一件事：把帳單照片交給 Gemini，回傳 { items, fees, notes }。
 // 防濫用：只接受白名單網站、限制照片數量與大小、指令寫死在這裡（不是任何人都能拿來問 Gemini 的通用代理）。
@@ -8,6 +8,7 @@
 
 interface Env {
   GEMINI_API_KEY?: string;
+  GEMINI_PAID_API_KEY?: string; // 選用：付費專案的金鑰，只在免費的全部失敗時才用
   GEMINI_MODELS: string;
   GEMINI_SAFE_MODEL: string;
   ALLOWED_ORIGINS: string;
@@ -26,6 +27,7 @@ const SAFE_EACH_MS = 25_000;
 const TOTAL_BUDGET_MS = 65_000; // 網頁端等 80 秒
 const MIN_TRY_MS = 5_000;
 const RETRY_PAUSE_MS = 2_000; // 第一輪全失敗後，輕量模型每輪重試之間先等一下
+const PAID_RESERVE_MS = 20_000; // 有付費金鑰時，免費重試提早收手，留時間給付費備援
 
 const PROMPT_ZH = `你是讀餐廳帳單的助手。請讀這張（或這幾張）帳單照片，回傳 JSON。
 
@@ -159,10 +161,13 @@ export default {
     const tried: string[] = [];
     let sawQuota = false;
     let sawBusy = false;
-    const key = env.GEMINI_API_KEY;
+    const freeKey = env.GEMINI_API_KEY as string;
+    const paidKey = env.GEMINI_PAID_API_KEY;
+    const freeBudget = paidKey ? TOTAL_BUDGET_MS - PAID_RESERVE_MS : TOTAL_BUDGET_MS;
 
     // 試一個模型：成功回 Response；失敗回 null，並記下原因
-    const attempt = async (model: string, timeout: number): Promise<Response | null> => {
+    const attempt = async (model: string, timeout: number, key = freeKey, label = ""): Promise<Response | null> => {
+      const tag = label + model;
       // Gemma 不支援指定 JSON 格式，只靠指令要求回 JSON
       const generationConfig = model.startsWith("gemma")
         ? {}
@@ -181,16 +186,16 @@ export default {
         });
       } catch (e) {
         sawBusy = true;
-        tried.push(`${model}:timeout`);
+        tried.push(`${tag}:timeout`);
         return null;
       }
 
       if (!res.ok) {
         if (res.status === 429) sawQuota = true;
         if (res.status === 503 || res.status === 500) sawBusy = true;
-        tried.push(`${model}:${res.status}`);
+        tried.push(`${tag}:${res.status}`);
         // 只記在 Cloudflare 的紀錄裡，不把 Google 的錯誤訊息原樣丟回網頁
-        console.log("gemini error", model, res.status, (await res.text()).slice(0, 300));
+        console.log("gemini error", tag, res.status, (await res.text()).slice(0, 300));
         return null;
       }
 
@@ -201,7 +206,7 @@ export default {
           .map((p: any) => p.text)
           .join("");
         const parsed = parseModelJson(text);
-        if (tried.length) console.log("fallback used", tried.join(" "), "->", model);
+        if (tried.length) console.log("fallback used", tried.join(" "), "->", tag);
         return json(
           {
             items: cleanLines(parsed?.items),
@@ -213,8 +218,8 @@ export default {
           okOrigin
         );
       } catch (e) {
-        tried.push(`${model}:parse`);
-        console.log("parse error", model, String(e));
+        tried.push(`${tag}:parse`);
+        console.log("parse error", tag, String(e));
         return null;
       }
     };
@@ -226,7 +231,7 @@ export default {
       const timeout =
         i < safeIndex
           ? Math.min(STRONG_EACH_MS, STRONG_PHASE_MS - elapsed)
-          : Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - elapsed);
+          : Math.min(SAFE_EACH_MS, freeBudget - elapsed);
       if (timeout < MIN_TRY_MS) {
         tried.push(`${model}:skip`);
         continue;
@@ -241,13 +246,23 @@ export default {
       let triedThisRound = false;
       for (const model of lightModels) {
         await new Promise((r) => setTimeout(r, RETRY_PAUSE_MS));
-        const timeout = Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - (Date.now() - started));
+        const timeout = Math.min(SAFE_EACH_MS, freeBudget - (Date.now() - started));
         if (timeout < MIN_TRY_MS) break;
         triedThisRound = true;
         const ok = await attempt(model, timeout);
         if (ok) return ok;
       }
       if (!triedThisRound) break;
+    }
+
+    // 最後備援：付費金鑰（有設才會用），只試便宜又快的輕量模型
+    if (paidKey) {
+      for (const model of lightModels) {
+        const timeout = Math.min(SAFE_EACH_MS, TOTAL_BUDGET_MS - (Date.now() - started));
+        if (timeout < MIN_TRY_MS) break;
+        const ok = await attempt(model, timeout, paidKey, "paid:");
+        if (ok) return ok;
+      }
     }
 
     console.log("all models failed", tried.join(" "));
