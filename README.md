@@ -1,7 +1,7 @@
 <!--
-最後更新：2026-11-23 07:10（台北時間）
+最後更新：2026-11-26 01:45（台北時間）
 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-修改摘要：功能表加上拍照讀帳單，隱私說明改成「拍照會送 Google Gemini，自己貼完全在本機」
+修改摘要：隱私說明改成付費方案：Google 不會拿照片改善產品
 -->
 <div align="center">
 
@@ -114,7 +114,7 @@ Dividing the total makes the light eaters quietly subsidise the heavy ones. This
 
 Everything runs in your browser — no account, no analytics. Your saved table lives in your own browser's local storage and is never uploaded.
 
-The one exception is **photo reading**: when you use it, the receipt photo is sent through a small relay to Google Gemini to read the items. This site doesn't store it, but Google may use it to improve its services. If you'd rather keep everything on your device, use the paste option instead — that path never leaves your browser.
+The one exception is **photo reading**: when you use it, the receipt photo is sent through a small relay to Google Gemini to read the items. This site doesn't store it, and because it uses a paid Gemini plan, Google doesn't use it to improve its products. If you'd rather keep everything on your device, use the paste option instead — that path never leaves your browser.
 
 ### Tech notes
 
@@ -205,7 +205,7 @@ MIT. Use it, fork it, deploy your own copy.
 
 全部在你的瀏覽器裡執行，**沒有帳號、沒有分析追蹤。** 存檔只存在你自己瀏覽器的本機儲存空間，不會上傳。
 
-唯一的例外是**拍照辨識**：使用時，帳單照片會經過一個小型中繼站送到 Google Gemini 讀取品項。本站不保存照片，但 Google 可能拿來改善服務。想讓資料完全不離開裝置，就用「自己貼明細」，那條路完全在你的瀏覽器裡完成。
+唯一的例外是**拍照辨識**：使用時，帳單照片會經過一個小型中繼站送到 Google Gemini 讀取品項。本站不保存照片；因為用的是 Gemini 付費方案，Google 也不會拿來改善產品。想讓資料完全不離開裝置，就用「自己貼明細」，那條路完全在你的瀏覽器裡完成。
 
 ### 技術說明
 

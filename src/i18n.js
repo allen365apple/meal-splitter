@@ -1,6 +1,6 @@
-// 最後更新：2026-11-26 01:15（台北時間）
+// 最後更新：2026-11-26 01:45（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：新增「Google AI 太多人用」錯誤訊息的英文
+// 修改摘要：隱私說明改成「Google 不會拿照片來訓練 AI」的中英文
 
 // 介面語言。以中文原文當 key，這樣原始碼讀起來還是中文、好維護。
 // 找不到對應翻譯時就原樣顯示，不會變成空白或 key 名稱。
@@ -199,7 +199,7 @@ export const EN = {
   '拍照': 'Take photo',
   '上傳照片': 'Upload photo',
   '上傳最多 {0} 張': 'Upload up to {0}',
-  '照片會送到 Google Gemini 辨識，本站不保存；Google 可能用來改善服務。': "Photos are sent to Google Gemini to be read. This site doesn't keep them; Google may use them to improve its services.",
+  '照片會送到 Google Gemini 辨識，本站不保存，Google 也不會拿來訓練 AI。': "Photos are sent to Google Gemini to be read. This site doesn't keep them, and Google doesn't use them to train its AI.",
   '收起手動貼上': 'Hide manual paste',
   '想自己貼明細？點這裡': 'Prefer to paste the bill yourself? Tap here',
   '③ 按 AI 回覆裡程式碼框的「複製」，貼回這裡': "③ Tap “Copy” on the code block in the AI's reply, then paste it here",

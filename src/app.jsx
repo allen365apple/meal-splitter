@@ -1,6 +1,6 @@
-// 最後更新：2026-11-26 01:15（台北時間）
+// 最後更新：2026-11-26 01:45（台北時間）
 // 誰幫忙的：Claude Code（Claude Opus 5.5；Claude 桌面 App）
-// 修改摘要：新增「Google AI 太多人用」的錯誤說明（中繼站全部模型忙線時顯示）
+// 修改摘要：Gemini 金鑰改成付費專案，隱私說明改成「Google 不會拿照片來訓練 AI」
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -1013,7 +1013,7 @@ const BillSplitter = () => {
                                 </div>
                                 <p className="text-[11px] text-green-700">{tf('上傳最多 {0} 張', MAX_PHOTOS)}</p>
                             </div>
-                            <p className="text-[11px] text-slate-400 leading-relaxed text-center">{t('照片會送到 Google Gemini 辨識，本站不保存；Google 可能用來改善服務。')}</p>
+                            <p className="text-[11px] text-slate-400 leading-relaxed text-center">{t('照片會送到 Google Gemini 辨識，本站不保存，Google 也不會拿來訓練 AI。')}</p>
                         </div>
                     )}
 
